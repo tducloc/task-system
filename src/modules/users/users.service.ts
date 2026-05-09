@@ -9,7 +9,7 @@ import { checkIsPrismaError } from '@/utils/errors';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(user: CreateUserDto) {
     try {
@@ -42,5 +42,19 @@ export class UsersService {
     }
 
     return getUserInfo(user);
+  }
+
+  async findOneByEmail(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email
+      }
+    })
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
   }
 }
