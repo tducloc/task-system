@@ -1,4 +1,5 @@
 import { ConfigModule } from '@nestjs/config';
+
 import Joi from 'joi';
 
 ConfigModule.forRoot({
