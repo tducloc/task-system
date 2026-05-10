@@ -64,3 +64,8 @@ export type Membership = Prisma.MembershipModel
  * 
  */
 export type TaskAssignee = Prisma.TaskAssigneeModel
+/**
+ * Model RefreshToken
+ * 
+ */
+export type RefreshToken = Prisma.RefreshTokenModel
