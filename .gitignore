@@ -46,6 +46,9 @@ coverage
 .temp
 .tmp
 
+# Playwright CLI scratch
+.playwright-cli
+
 # Runtime data
 pids
 *.pid
