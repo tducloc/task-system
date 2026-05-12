@@ -1,98 +1,101 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Task System
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Monorepo containing the Task System backend and frontend.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ pnpm install
+```
+task-system/
+├── backend/   NestJS 11 + Prisma 7 + PostgreSQL (Auth + Users today)
+└── frontend/  React 19 + Vite 8 + TypeScript 6 + Tailwind + shadcn/ui
 ```
 
-## Compile and run the project
+## Stack
+
+**Backend** (`backend/`)
+- NestJS 11, Prisma 7, PostgreSQL, JWT (access + rotating refresh tokens)
+- Exposes today: `POST /users` (register), `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /users/me`, `GET /users/:id`
+
+**Frontend** (`frontend/`)
+- React 19 + Vite 8 + TypeScript 6
+- Routing: `react-router-dom` v7
+- Server state: `@tanstack/react-query`
+- Forms: `react-hook-form` + `zod`
+- UI: Tailwind CSS v3 + shadcn/ui (`button`, `input`, `label`, `card`, `form`, `sonner`)
+- Config lives in `frontend/src/configurations/` (TS files, **no `.env`** on FE)
+- API calls go to `/api/*` which the Vite dev server proxies to `http://localhost:3000` — no CORS change needed on BE
+
+## Prerequisites
+
+- Node.js 20+
+- pnpm 9+
+- PostgreSQL reachable at the URL you put in `backend/.env`
+
+## First time setup
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+# from repo root
+pnpm install
 ```
 
-## Run tests
+Create `backend/.env`:
+
+```dotenv
+DATABASE_URL="postgresql://user:password@localhost:5432/task_system"
+JWT_SECRET="some-long-random-string"
+JWT_REFRESH_SECRET="another-long-random-string"
+# PORT=3000   # optional, defaults to 3000
+```
+
+Apply migrations:
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm --filter backend exec prisma migrate deploy
+# or, for local dev:
+pnpm --filter backend exec prisma migrate dev
 ```
 
-## Deployment
+## Local development
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Run the backend and frontend in two terminals:
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+# terminal 1 — backend on http://localhost:3000
+pnpm dev:be
+
+# terminal 2 — frontend on http://localhost:5173
+pnpm dev:fe
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Open http://localhost:5173 in a browser. The FE proxies `/api/*` to the BE.
 
-## Resources
+## Other scripts (run from repo root)
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+pnpm build       # builds both packages
+pnpm lint        # lints both packages
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+To run a script in only one package, use `pnpm --filter <pkg>`:
 
-## Support
+```bash
+pnpm --filter backend run start:debug
+pnpm --filter frontend run preview
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Smoke test checklist
 
-## Stay in touch
+Once both servers are running, exercise these flows in the browser to verify everything is wired up:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+1. Open `http://localhost:5173/` — should redirect to `/login`.
+2. Click "Đăng ký" → fill `test@example.com` / `password123` → submit. Expect toast "Đăng ký thành công" and redirect to `/login`.
+3. On `/login`, sign in with those credentials. Expect redirect to `/me` showing the user's id, email, and timestamps.
+4. Open DevTools → Application → Local Storage. Expect `ts_access` and `ts_refresh` populated.
+5. Delete `ts_access` only and reload `/me`. The api-client should silently refresh and the page should load. Verify `ts_access` is repopulated.
+6. Delete both tokens and reload `/me`. Expect redirect to `/login`.
+7. Click "Đăng xuất". Expect tokens cleared from localStorage and redirect to `/login`.
+8. Try logging in with a wrong password. Expect toast "Email hoặc mật khẩu không đúng".
+9. Try registering an existing email. Expect inline error on the email field: "Email already exists".
+10. Visit `/users/00000000-0000-0000-0000-000000000000`. Expect in-page "Không tìm thấy user với id…" (not a toast).
 
-## License
+## Layout
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+See `docs/superpowers/specs/2026-05-12-monorepo-fe-design.md` for the design and `docs/superpowers/plans/2026-05-12-monorepo-fe-scaffold.md` for the implementation plan.
