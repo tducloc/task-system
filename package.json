@@ -1,0 +1,14 @@
+{
+  "name": "task-system",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Task system monorepo (backend + frontend)",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "dev:be": "pnpm --filter backend run start:dev",
+    "dev:fe": "pnpm --filter frontend run dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
