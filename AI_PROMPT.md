@@ -19,11 +19,17 @@
 - **Git Workflow:** Tuân thủ quy tắc nhánh `release/<release-name>/<feature-name>` và commit message chuẩn (feat, fix, refactor...).
 - **Pull Request Conventions:**
   - **Base Branch:** Luôn trỏ Pull Request vào `*/main` của cùng một release. Ví dụ: Nhánh `release/mvp/workspace-module` phải trỏ vào `release/mvp/main`. Tuyệt đối không trỏ thẳng vào `main` trừ khi nhánh đó không có `*/main` tương ứng.
-  - **Title Format:** Dùng cấu trúc `[TAG] type: Subject`.
+  - **Title Format:** Dùng cấu trúc `[TAG] Subject`.
     - **TAG**: Là `<release-name>` viết hoa. (VD: `release/mvp/...` -> `[MVP]`, `hotfix/v1.3.1.hf/...` -> `[V1.3.1.HF]`).
-    - **type**: Giống như commit (feat, fix, chore, refactor...).
     - **Subject**: Viết hoa chữ cái đầu, không có dấu chấm ở cuối câu.
     - **Ví dụ chuẩn:** `[MVP] feat: Add Workspace module` hoặc `[CHOCO] fix: Fix login crash`.
+- **PROJECT_LOG Workflow:**
+  - **Khi bắt đầu conversation mới:** AI PHẢI đọc file `PROJECT_LOG.md` để nắm tiến độ hiện tại trước khi làm bất cứ điều gì.
+  - **Khi kết thúc ngày (hoặc khi user yêu cầu):** AI PHẢI cập nhật `PROJECT_LOG.md` với những gì đã làm trong ngày hôm đó, bao gồm:
+    - Các tính năng/module đã hoàn thành (BE và FE).
+    - Các quyết định kỹ thuật quan trọng đã đưa ra.
+    - Cập nhật mục "Bước tiếp theo" để phản ánh trạng thái hiện tại.
+  - **Format mỗi Day:** `### Day X: [Tên tính năng] (Đã xong - YYYY-MM-DD)`
 
 ## 3. Cách trình bày
 

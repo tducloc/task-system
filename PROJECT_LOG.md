@@ -29,7 +29,26 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 - **`PATCH /workspaces/:id`**: Chỉ cho phép `OWNER` cập nhật (check quyền khắt khe).
 - **`DELETE /workspaces/:id`**: Chỉ `OWNER` mới được xóa. Đã xử lý xóa thủ công (cascade thủ công) `Membership` và `Task` trước khi xóa `Workspace` để tránh văng lỗi Khóa ngoại (P2003).
 
+### Day 9: Membership Module + Workspace Frontend (Đã xong - 2026-05-15)
+**Backend:**
+- **`GET /workspaces/:workspaceId/memberships`**: Lấy danh sách thành viên (chỉ member trong workspace mới xem được).
+- **`PATCH /workspaces/:workspaceId/memberships/:id`**: Đổi role (OWNER ↔ MEMBER). Có check "last owner protection" — không cho giáng cấp OWNER cuối cùng.
+- **`DELETE /workspaces/:workspaceId/memberships/:id`**: Kick thành viên hoặc tự rời nhóm. Cũng có check last owner.
+- **Refactor**: Tách helper methods `checkIsOwner`, `ensureTargetNotLastOwner`, `getMembership` để tránh lặp code và tối ưu số lượng query.
+
+**Frontend:**
+- **Workspace List** (`/workspaces`): Hiển thị danh sách, form tạo mới, form join bằng ID.
+- **Workspace Detail** (`/workspaces/:id`): Inline rename, xóa workspace (OWNER only).
+- **Member Management**: Xem danh sách, thăng/giáng cấp, kick, tự rời nhóm.
+- **Tách component** `MemberList.tsx` ra khỏi `WorkspaceDetailPage.tsx` để giữ dưới 200 dòng.
+- **Clean Code**: Áp dụng `CLEAN_CODE.MD` — dùng `enum Role`, `interface` thay `type`, `handle`-prefix cho handlers, `on`-prefix cho callback props, `is`-prefix cho boolean props.
+- **Mở rộng `api-client.ts`**: Thêm method `patch` và `delete`.
+
+**Quyết định kỹ thuật:**
+- Tắt `erasableSyntaxOnly` trong `tsconfig.app.json` để dùng `enum` cho gọn.
+- Dùng `as const` object pattern không cần thiết khi có thể dùng native enum.
+
 ## 3. Bước tiếp theo (Next up)
-- **Day 9**: Xây dựng module `Membership` (Quản lý các thành viên, phân quyền cụ thể OWNER/MEMBER).
-- **Day 10**: Triển khai RBAC (Role-Based Access Control) Guard cho toàn bộ Backend.
-- Bắt đầu kết nối Frontend với API Backend.
+- **Day 10**: Triển khai RBAC (Role-Based Access Control) Guard cho Backend — loại bỏ logic check quyền lặp lại trong Service.
+- **Day 11**: Task CRUD với workspace isolation.
+- **Day 12**: Task filtering + pagination.
