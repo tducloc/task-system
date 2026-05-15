@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, LayoutGrid, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLogoutMutation } from '@/features/auth/api';
 
@@ -15,12 +15,21 @@ export default function Header() {
   return (
     <header className="border-b">
       <div className="container flex h-14 items-center justify-between">
-        <Link to="/me" className="text-lg font-semibold">
+        <Link to="/workspaces" className="text-lg font-semibold">
           Task System
         </Link>
-        <nav className="flex items-center gap-2">
-          <Button variant="ghost" asChild>
-            <Link to="/me">Tôi</Link>
+        <nav className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/workspaces">
+              <LayoutGrid className="mr-1.5 h-4 w-4" />
+              Workspaces
+            </Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/me">
+              <User className="mr-1.5 h-4 w-4" />
+              Tôi
+            </Link>
           </Button>
           <Button
             variant="outline"

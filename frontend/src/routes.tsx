@@ -5,10 +5,12 @@ import RegisterPage from '@/features/auth/RegisterPage';
 import ProtectedRoute from '@/features/auth/ProtectedRoute';
 import MePage from '@/features/users/MePage';
 import UserDetailPage from '@/features/users/UserDetailPage';
+import WorkspacesPage from '@/features/workspaces/WorkspacesPage';
+import WorkspaceDetailPage from '@/features/workspaces/WorkspaceDetailPage';
 import { getAccess } from '@/lib/auth-storage';
 
 function RootRedirect() {
-  return <Navigate to={getAccess() ? '/me' : '/login'} replace />;
+  return <Navigate to={getAccess() ? '/workspaces' : '/login'} replace />;
 }
 
 export const routes: RouteObject[] = [
@@ -23,6 +25,8 @@ export const routes: RouteObject[] = [
         children: [
           { path: '/me', element: <MePage /> },
           { path: '/users/:id', element: <UserDetailPage /> },
+          { path: '/workspaces', element: <WorkspacesPage /> },
+          { path: '/workspaces/:id', element: <WorkspaceDetailPage /> },
         ],
       },
     ],
