@@ -60,7 +60,7 @@ export class MembershipsService {
     }
   }
 
-  async findAll(userId: string, workspaceId: string) {
+  async findAll(workspaceId: string) {
     const memberships = await this.prisma.membership.findMany({
       where: {
         workspaceId,
@@ -75,32 +75,19 @@ export class MembershipsService {
       },
     });
 
-    const isMember = memberships.some(
-      (membership) => membership.userId === userId,
-    );
-
-    if (!isMember) {
-      throw new ForbiddenException('You are not a member of this workspace');
-    }
-
     return memberships;
   }
 
   async update({
-    currentUserId,
     workspaceId,
     membershipId,
     data,
   }: {
-    currentUserId: string;
     workspaceId: string;
     membershipId: string;
     data: UpdateMembershipDto;
   }) {
     return this.prisma.$transaction(async (tx) => {
-      // Check permission
-      await this.checkIsOwner(tx, workspaceId, currentUserId);
-
       const targetMembership = await this.getMembership(tx, membershipId);
 
       if (data.role === Role.MEMBER) {
@@ -121,14 +108,14 @@ export class MembershipsService {
   remove({
     currentUserId,
     workspaceId,
-    memebershipId,
+    membershipId,
   }: {
     currentUserId: string;
     workspaceId: string;
-    memebershipId: string;
+    membershipId: string;
   }) {
     return this.prisma.$transaction(async (tx) => {
-      const targetMembership = await this.getMembership(tx, memebershipId);
+      const targetMembership = await this.getMembership(tx, membershipId);
 
       // Delete yourself
       if (targetMembership.userId === currentUserId) {
@@ -144,7 +131,7 @@ export class MembershipsService {
       }
 
       return await tx.membership.delete({
-        where: { id: memebershipId },
+        where: { id: membershipId },
       });
     });
   }
