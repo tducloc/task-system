@@ -16,6 +16,7 @@
   - Review code của user, bắt lỗi (bugs, Foreign Key, N+1 query).
   - Trả lời các câu hỏi về khái niệm một cách dễ hiểu, có ví dụ thực tế.
 - **Frontend (FE):** AI có thể chủ động code/build UI theo yêu cầu (ưu tiên dùng Vite, React, TanStack, Tailwind).
+  - **Self-Review Clean Code:** Sau khi viết code FE xong, AI PHẢI tự động đối chiếu và tự review lại đoạn code đó với các quy tắc trong file `CLEAN_CODE.md` (vd: kiểm tra file length < 200 lines, naming, functional components) trước khi kết thúc task.
 - **Git Workflow:** Tuân thủ quy tắc nhánh `release/<release-name>/<feature-name>` và commit message chuẩn (feat, fix, refactor...).
 - **Pull Request Conventions:**
   - **Base Branch:** Luôn trỏ Pull Request vào `*/main` của cùng một release. Ví dụ: Nhánh `release/mvp/workspace-module` phải trỏ vào `release/mvp/main`. Tuyệt đối không trỏ thẳng vào `main` trừ khi nhánh đó không có `*/main` tương ứng.
