@@ -63,7 +63,7 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 - `DELETE /memberships/:id` cho phép cả `MEMBER` và `OWNER` call — fine-grained logic (self-leave vs kick) giữ trong Service.
 - `checkIsOwner` helper giữ lại trong `MembershipsService` cho trường hợp kick người khác trong `remove`.
 
-### Day 11: Task Module & FE Task UI (Đã xong - 2026-05-17)
+### Day 11: Task Module & Advanced FE Task UI (Đã xong - 2026-05-17)
 **Backend:**
 - **Tạo `TasksModule`**: Thiết kế chuẩn RESTful với prefix `/workspaces/:workspaceId/tasks`.
 - **Áp dụng Guard**: Tái sử dụng `WorkspaceRoleGuard` và `@WorkspaceRoles(Role.MEMBER, Role.OWNER)` cho CRUD bảo đảm chỉ thành viên mới được quyền thực hiện thao tác.
@@ -71,10 +71,13 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 
 **Frontend:**
 - **Types & API Hooks**: Thêm `types.ts` và `api.ts` cho module `tasks` (TanStack Query, `api-client`).
-- **Thêm Shadcn Select**: Dùng shadcn-ui cài đặt `select` dropdown component.
-- **`TaskList.tsx` Component**: Giao diện tạo mới task nhanh gọn, danh sách tasks hiển thị trạng thái TODO, IN_PROGRESS, DONE kèm theo thao tác cập nhật nhanh trạng thái và xoá task.
-- **Tích hợp vào `WorkspaceDetailPage`**: Hiển thị bảng Task ngay dưới thông tin Workspace, sẵn sàng cho E2E Testing.
+- **Thêm Shadcn Table & Select**: Cài đặt table và select component, fix lỗi path alias của CLI shadcn trong môi trường Vite.
+- **`TaskList.tsx` & `TaskRow.tsx`**: Refactor UI thành dạng Table (Database View) chuẩn mực giống Notion/Coda. Tách dòng ra thành component riêng để tuân thủ `CLEAN_CODE.md` (<200 lines).
+- **Cột Thời Gian**: Format `createdAt` và `updatedAt` siêu nhẹ bằng native `Intl.DateTimeFormat` (không dùng date-fns).
+- **Optimistic Updates**: Ứng dụng `onMutate` của TanStack Query để fake UI mượt mà không độ trễ khi Tạo, Sửa, và Xóa task (kèm auto-rollback khi API fail). Fix lỗi "Global Loading Flicker" bằng cách target chính xác `taskId`.
+- **Tích hợp vào `WorkspaceDetailPage`**: Hiển thị bảng Task ngay dưới thông tin Workspace.
 
 ## 3. Bước tiếp theo (Next up)
-- **Day 12**: Thêm UI hiển thị và gán Assignee cho task (nối FE với BE task assignee logic).
-- **Day 13**: Task filtering, pagination & E2E Testing.
+- **Day 12**: Bổ sung Filter, Sorting, và Pagination cho Table.
+- **Day 13**: E2E Testing cho toàn bộ luồng Tasks và Memberships.
+
