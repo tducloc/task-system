@@ -48,7 +48,21 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 - Tắt `erasableSyntaxOnly` trong `tsconfig.app.json` để dùng `enum` cho gọn.
 - Dùng `as const` object pattern không cần thiết khi có thể dùng native enum.
 
+### Day 10: RBAC Guard (Đã xong - 2026-05-16)
+**Backend:**
+- **Tạo `WorkspaceRoles` decorator** (`workspace-roles.decorator.ts`): Dùng `SetMetadata` để gắn required roles vào metadata của route.
+- **Tạo `WorkspaceRoleGuard`** (`workspace-role.guard.ts`): Guard query DB lấy membership của user, check role, throw `ForbiddenException` nếu không đủ quyền. Inject `request.membership` để tránh double query.
+- **Register Guard** vào `WorkspacesModule` và `MembershipsModule` providers.
+- **Refactor `WorkspacesController`**: Thêm `@UseGuards(WorkspaceRoleGuard)` + `@WorkspaceRoles(...)` cho `GET :id`, `PATCH :id`, `DELETE :id`. Xóa `@CurrentUser()` khỏi các route đã có guard.
+- **Refactor `WorkspacesService`**: Xóa toàn bộ logic check quyền (membership query + role check) khỏi `findOne`, `update`, `remove`. Đổi `ForbiddenException` → `NotFoundException` cho 404. Bỏ transaction trong `update` (chỉ 1 operation).
+- **Refactor `MembershipsController`**: Thêm Guard cho cả 3 routes. `DELETE` dùng `@WorkspaceRoles(Role.OWNER, Role.MEMBER)` để member có thể tự rời nhóm.
+- **Refactor `MembershipsService`**: Xóa `isMember` check trong `findAll`. Xóa `checkIsOwner` call trong `update`. Giữ lại `checkIsOwner` helper cho `remove` (kick người khác phải là OWNER). Fix typo `memebershipId` → `membershipId`.
+
+**Quyết định kỹ thuật:**
+- Guard dùng `request.params?.workspaceId ?? request.params?.id` để hoạt động được với cả 2 controller pattern (`/workspaces/:id` và `/workspaces/:workspaceId/memberships/:id`).
+- `DELETE /memberships/:id` cho phép cả `MEMBER` và `OWNER` call — fine-grained logic (self-leave vs kick) giữ trong Service.
+- `checkIsOwner` helper giữ lại trong `MembershipsService` cho trường hợp kick người khác trong `remove`.
+
 ## 3. Bước tiếp theo (Next up)
-- **Day 10**: Triển khai RBAC (Role-Based Access Control) Guard cho Backend — loại bỏ logic check quyền lặp lại trong Service.
-- **Day 11**: Task CRUD với workspace isolation.
+- **Day 11**: Task CRUD với workspace isolation (chỉ member trong workspace mới CRUD được task).
 - **Day 12**: Task filtering + pagination.

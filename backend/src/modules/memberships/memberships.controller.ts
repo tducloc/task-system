@@ -1,6 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
+
+import { Role } from 'prisma/generated/enums';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { WorkspaceRoles } from '../auth/decorators/workspace-roles.decorator';
+import { WorkspaceRoleGuard } from '../auth/guards/workspace-role.guard';
 import { UpdateMembershipDto } from './dto/update-membership.dto';
 import { MembershipsService } from './memberships.service';
 
@@ -9,22 +21,21 @@ export class MembershipsController {
   constructor(private readonly membershipsService: MembershipsService) {}
 
   @Get()
-  findAll(
-    @CurrentUser() currentUser,
-    @Param('workspaceId') workspaceId: string,
-  ) {
-    return this.membershipsService.findAll(currentUser.sub, workspaceId);
+  @UseGuards(WorkspaceRoleGuard)
+  @WorkspaceRoles(Role.OWNER, Role.MEMBER)
+  findAll(@Param('workspaceId') workspaceId: string) {
+    return this.membershipsService.findAll(workspaceId);
   }
 
   @Patch(':id')
+  @UseGuards(WorkspaceRoleGuard)
+  @WorkspaceRoles(Role.OWNER)
   update(
-    @CurrentUser() currentUser,
     @Param('id') id: string,
     @Param('workspaceId') workspaceId: string,
     @Body() updateMembershipDto: UpdateMembershipDto,
   ) {
     return this.membershipsService.update({
-      currentUserId: currentUser.sub,
       workspaceId,
       membershipId: id,
       data: updateMembershipDto,
@@ -32,6 +43,8 @@ export class MembershipsController {
   }
 
   @Delete(':id')
+  @UseGuards(WorkspaceRoleGuard)
+  @WorkspaceRoles(Role.OWNER, Role.MEMBER)
   remove(
     @CurrentUser() currentUser,
     @Param('id') id: string,
@@ -40,7 +53,7 @@ export class MembershipsController {
     return this.membershipsService.remove({
       currentUserId: currentUser.sub,
       workspaceId,
-      memebershipId: id,
+      membershipId: id,
     });
   }
 }

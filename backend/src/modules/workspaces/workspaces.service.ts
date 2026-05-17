@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { PrismaService } from '@/database/prisma.service';
 
@@ -35,7 +39,7 @@ export class WorkspacesService {
     });
   }
 
-  async findOne(userId: string, id: string) {
+  async findOne(id: string) {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id },
       include: {
@@ -53,54 +57,21 @@ export class WorkspacesService {
     });
 
     if (!workspace) {
-      throw new ForbiddenException('Workspace not found');
-    }
-
-    const membership = workspace.memberships.find(
-      (membership) => membership.userId === userId,
-    );
-
-    if (!membership) {
-      throw new ForbiddenException('You are not a member of this workspace');
+      throw new NotFoundException('Workspace not found');
     }
 
     return workspace;
   }
 
-  update(userId: string, id: string, updateWorkspaceDto: UpdateWorkspaceDto) {
-    return this.prisma.$transaction(async (tx) => {
-      // Check permission
-      const membership = await tx.membership.findUnique({
-        where: { userId_workspaceId: { userId, workspaceId: id } },
-      });
-
-      if (!membership) {
-        throw new ForbiddenException('You are not a member of this workspace');
-      }
-
-      if (membership.role !== 'OWNER') {
-        throw new ForbiddenException('Only owner can update workspace');
-      }
-
-      // Update workspace
-      return tx.workspace.update({
-        where: { id },
-        data: updateWorkspaceDto,
-      });
+  update(id: string, updateWorkspaceDto: UpdateWorkspaceDto) {
+    return this.prisma.workspace.update({
+      where: { id },
+      data: updateWorkspaceDto,
     });
   }
 
-  remove(userId: string, id: string) {
+  remove(id: string) {
     return this.prisma.$transaction(async (tx) => {
-      // Check permission
-      const membership = await tx.membership.findUnique({
-        where: { userId_workspaceId: { userId, workspaceId: id } },
-      });
-
-      if (!membership || membership.role !== 'OWNER') {
-        throw new ForbiddenException('Only owner can delete workspace');
-      }
-
       // Delete all membership
       await tx.membership.deleteMany({
         where: { workspaceId: id },
@@ -125,7 +96,7 @@ export class WorkspacesService {
     });
 
     if (!workspace) {
-      throw new ForbiddenException('Workspace not found');
+      throw new NotFoundException('Workspace not found');
     }
 
     // Check user is not already a member
