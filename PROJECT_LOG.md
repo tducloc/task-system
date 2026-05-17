@@ -63,6 +63,18 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 - `DELETE /memberships/:id` cho phép cả `MEMBER` và `OWNER` call — fine-grained logic (self-leave vs kick) giữ trong Service.
 - `checkIsOwner` helper giữ lại trong `MembershipsService` cho trường hợp kick người khác trong `remove`.
 
+### Day 11: Task Module & FE Task UI (Đã xong - 2026-05-17)
+**Backend:**
+- **Tạo `TasksModule`**: Thiết kế chuẩn RESTful với prefix `/workspaces/:workspaceId/tasks`.
+- **Áp dụng Guard**: Tái sử dụng `WorkspaceRoleGuard` và `@WorkspaceRoles(Role.MEMBER, Role.OWNER)` cho CRUD bảo đảm chỉ thành viên mới được quyền thực hiện thao tác.
+- **`TasksService`**: Cập nhật logic tạo/sửa task hỗ trợ gán (assignees) tự động mapping với user. Method `getAll` trả về dữ liệu cùng `assignees` đã được populate kèm `email` để tiện hiển thị.
+
+**Frontend:**
+- **Types & API Hooks**: Thêm `types.ts` và `api.ts` cho module `tasks` (TanStack Query, `api-client`).
+- **Thêm Shadcn Select**: Dùng shadcn-ui cài đặt `select` dropdown component.
+- **`TaskList.tsx` Component**: Giao diện tạo mới task nhanh gọn, danh sách tasks hiển thị trạng thái TODO, IN_PROGRESS, DONE kèm theo thao tác cập nhật nhanh trạng thái và xoá task.
+- **Tích hợp vào `WorkspaceDetailPage`**: Hiển thị bảng Task ngay dưới thông tin Workspace, sẵn sàng cho E2E Testing.
+
 ## 3. Bước tiếp theo (Next up)
-- **Day 11**: Task CRUD với workspace isolation (chỉ member trong workspace mới CRUD được task).
-- **Day 12**: Task filtering + pagination.
+- **Day 12**: Thêm UI hiển thị và gán Assignee cho task (nối FE với BE task assignee logic).
+- **Day 13**: Task filtering, pagination & E2E Testing.

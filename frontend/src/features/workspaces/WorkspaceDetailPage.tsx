@@ -17,6 +17,7 @@ import {
 import type { Membership } from './types';
 import { Role } from './types';
 import MemberList from './MemberList';
+import TaskList from '@/features/tasks/TaskList';
 
 export default function WorkspaceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -179,6 +180,9 @@ export default function WorkspaceDetailPage() {
           <p>Tạo lúc: {new Date(workspace.createdAt).toLocaleString('vi-VN')}</p>
         </CardContent>
       </Card>
+
+      {/* Tasks */}
+      <TaskList workspaceId={workspace.id} />
 
       {/* Members */}
       <MemberList

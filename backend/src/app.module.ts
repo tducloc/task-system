@@ -5,6 +5,7 @@ import { PrismaModule } from './database/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthGuard } from './modules/auth/guards/auth.guard';
 import { MembershipsModule } from './modules/memberships/memberships.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 import { UsersModule } from './modules/users/users.module';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module';
 
@@ -15,6 +16,7 @@ import { WorkspacesModule } from './modules/workspaces/workspaces.module';
     AuthModule,
     WorkspacesModule,
     MembershipsModule,
+    TasksModule,
   ],
   providers: [
     {
