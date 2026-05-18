@@ -102,5 +102,7 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 - URL là source of truth cho table state, `useState` chỉ dùng cho local input debounce.
 
 ## 3. Bước tiếp theo (Next up)
-- **Day 13**: E2E Testing cho toàn bộ luồng Tasks và Memberships.
+- **Day 13**: Activity Log — ghi lại lịch sử thay đổi task (BE model + service auto-log, FE timeline UI).
+- **Day 14**: Redis setup + Cache task list.
+- **Day 15**: Cache invalidation + consistency testing.
 
