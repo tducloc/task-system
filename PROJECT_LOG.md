@@ -77,7 +77,30 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 - **Optimistic Updates**: Ứng dụng `onMutate` của TanStack Query để fake UI mượt mà không độ trễ khi Tạo, Sửa, và Xóa task (kèm auto-rollback khi API fail). Fix lỗi "Global Loading Flicker" bằng cách target chính xác `taskId`.
 - **Tích hợp vào `WorkspaceDetailPage`**: Hiển thị bảng Task ngay dưới thông tin Workspace.
 
+### Day 12: Filter, Sorting, Pagination & Security Hardening (Đã xong - 2026-05-18)
+**Backend:**
+- **`QueryTaskDto`**: Thêm `@Transform` cho array params (`statuses[]`, `assignees[]`), `@Min(1)` cho page/limit, `@MaxLength(255)` cho search.
+- **`TasksService.getAll`**: Extract `where` clause dùng chung cho `findMany` + `count` (fix bug count không apply filter). Search case-insensitive (`mode: 'insensitive'`). Thêm guard `statuses ?` tránh query lỗi khi undefined.
+- **Security Fix**: Thêm `workspaceId` validation vào `get()`, `update()`, `delete()` — chặn truy cập task cross-workspace. `delete()` dùng `findFirst` check trước rồi mới transaction xóa (fail-early, tránh orphan assignee deletion).
+- **Error Handling**: Thêm try-catch P2025 → `NotFoundException` trong `update()`. Controller typed params (`workspaceId: string`, `id: string`).
+
+**Frontend:**
+- **TanStack Table** (`@tanstack/react-table` v8): Column definitions tách ra `columns.tsx`, server-side sorting via `manualSorting: true`.
+- **Filter UI**: `TaskFilters.tsx` dùng shadcn `Popover` dropdown multi-select cho Status và Assignee (checkbox pattern), search input debounced 400ms.
+- **Pagination**: `TaskPagination.tsx` dùng shadcn `Pagination` component, smart page numbers với ellipsis, responsive (ẩn page numbers trên mobile).
+- **Smart Optimistic Updates**: Tự navigate sang trang mới khi create trên trang cuối đã full. Tự quay về trang trước khi xóa item cuối cùng trên trang cuối.
+- **URL Sync**: Toàn bộ table state (filter, sort, page, search) sync lên URL search params qua `useSearchParams`. Refresh/share URL giữ nguyên state.
+- **Responsive**: Container `max-w-6xl`, cột Ngày tạo/Cập nhật `hidden lg:table-cell`, `overflow-x-auto` cho mobile.
+- **Refactor**: Tách `useTaskFilters`, `useTaskActions`, `columns.tsx` — tất cả component files < 200 lines.
+
+**Packages thêm:** `@tanstack/react-table`, `qs`, shadcn `pagination`, `popover`, `badge`.
+
+**Quyết định kỹ thuật:**
+- Dùng `qs` library serialize query params thay vì tự build (handle array format chuẩn).
+- TanStack Table chỉ bị hack ở Router/Start repo, Table repo an toàn — confirm qua postmortem chính thức.
+- Optimistic update chỉ append khi ở trang cuối còn chỗ; các trường hợp khác chỉ update meta counts.
+- URL là source of truth cho table state, `useState` chỉ dùng cho local input debounce.
+
 ## 3. Bước tiếp theo (Next up)
-- **Day 12**: Bổ sung Filter, Sorting, và Pagination cho Table.
 - **Day 13**: E2E Testing cho toàn bộ luồng Tasks và Memberships.
 
