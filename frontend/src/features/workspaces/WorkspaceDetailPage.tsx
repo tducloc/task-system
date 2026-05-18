@@ -43,7 +43,7 @@ export default function WorkspaceDetailPage() {
   if (isError) {
     const status = error instanceof ApiError ? error.status : 0;
     return (
-      <div className="mx-auto max-w-3xl p-6 space-y-4">
+      <div className="mx-auto max-w-6xl px-4 py-6 space-y-4 sm:px-6">
         <Button variant="ghost" size="sm" onClick={() => navigate('/workspaces')}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
         </Button>
@@ -131,7 +131,7 @@ export default function WorkspaceDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-6 space-y-6">
+    <div className="mx-auto max-w-6xl px-4 py-6 space-y-6 sm:px-6">
       {/* Back */}
       <Button variant="ghost" size="sm" onClick={() => navigate('/workspaces')}>
         <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
