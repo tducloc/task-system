@@ -4,6 +4,18 @@ export enum TaskStatus {
   DONE = 'DONE',
 }
 
+export enum SortBy {
+  CREATED_AT = 'createdAt',
+  UPDATED_AT = 'updatedAt',
+  TITLE = 'title',
+  STATUS = 'status',
+}
+
+export enum OrderBy {
+  ASC = 'asc',
+  DESC = 'desc',
+}
+
 export interface TaskAssignee {
   id: string;
   taskId: string;
@@ -22,6 +34,28 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   assignees?: TaskAssignee[];
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPage: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
+export interface TaskQueryParams {
+  page: number;
+  limit: number;
+  sortBy?: SortBy;
+  orderBy?: OrderBy;
+  statuses?: TaskStatus[];
+  assignees?: string[];
+  search?: string;
 }
 
 export interface CreateTaskInput {
