@@ -1,93 +1,70 @@
-import { useState } from "react";
-import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
-import {
-  useTasksQuery,
-  useCreateTaskMutation,
-  useUpdateTaskMutation,
-  useDeleteTaskMutation,
-} from "./api";
-import { TaskStatus } from "./types";
+import { useMemo } from "react";
+import { flexRender, useReactTable, getCoreRowModel, type SortingState } from "@tanstack/react-table";
+import { Loader2, Plus, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { useTasksQuery } from "./api";
+import { SortBy, OrderBy } from "./types";
 import { useMembershipsQuery } from "@/features/workspaces/api";
-import { ApiError } from "@/lib/api-client";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { TaskRow } from "./TaskRow";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TaskFilters } from "./TaskFilters";
+import { TaskPagination } from "./TaskPagination";
+import { useTaskActions } from "./useTaskActions";
+import { useTaskFilters } from "./useTaskFilters";
+import { columns } from "./columns";
+import type { TaskTableMeta } from "./columns";
+
+const SORT_FIELD_MAP: Record<string, SortBy> = {
+  title: SortBy.TITLE,
+  status: SortBy.STATUS,
+  createdAt: SortBy.CREATED_AT,
+  updatedAt: SortBy.UPDATED_AT,
+};
 
 interface TaskListProps {
   workspaceId: string;
 }
 
 export default function TaskList({ workspaceId }: TaskListProps) {
-  const { data: tasks, isLoading: isLoadingTasks } = useTasksQuery(workspaceId);
-  const { data: memberships, isLoading: isLoadingMembers } =
-    useMembershipsQuery(workspaceId);
-  const createMutation = useCreateTaskMutation(workspaceId);
-  const updateMutation = useUpdateTaskMutation(workspaceId);
-  const deleteMutation = useDeleteTaskMutation(workspaceId);
+  const filters = useTaskFilters();
+  const { queryParams } = filters;
 
-  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const { data: response, isLoading: isLoadingTasks } = useTasksQuery(workspaceId, queryParams);
+  const { data: memberships, isLoading: isLoadingMembers } = useMembershipsQuery(workspaceId);
+  const actions = useTaskActions(workspaceId, queryParams, filters.handlePageChange);
 
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault();
-    const title = newTaskTitle.trim();
-    if (!title) return;
+  const tasks = response?.data ?? [];
+  const meta = response?.meta;
 
-    // Clear input instantly for optimistic feel
-    setNewTaskTitle("");
+  const sorting: SortingState = useMemo(() => {
+    if (!queryParams.sortBy) return [];
+    return [{ id: queryParams.sortBy, desc: queryParams.orderBy === OrderBy.DESC }];
+  }, [queryParams.sortBy, queryParams.orderBy]);
 
-    createMutation.mutate(
-      { title, status: TaskStatus.TODO },
-      {
-        onSuccess: () => {
-          toast.success("Đã tạo thẻ mới!");
-        },
-        onError: (err) => {
-          // Revert the input if failed
-          setNewTaskTitle(title);
-          toast.error(err instanceof ApiError ? err.message : "Lỗi tạo task");
-        },
+  const tableMeta: TaskTableMeta = useMemo(() => ({
+    memberships: memberships ?? [],
+    updatingId: actions.updateMutation.isPending ? actions.updateMutation.variables?.id : undefined,
+    deletingId: actions.deleteMutation.isPending ? (actions.deleteMutation.variables as string) : undefined,
+    onStatusChange: actions.handleStatusChange,
+    onAssigneeChange: actions.handleAssigneeChange,
+    onDelete: actions.handleDelete,
+  }), [memberships, actions]);
+
+  const table = useReactTable({
+    data: tasks,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    manualSorting: true,
+    state: { sorting },
+    onSortingChange: (updater) => {
+      const next = typeof updater === "function" ? updater(sorting) : updater;
+      if (next.length === 0) {
+        filters.handleClearSort();
+      } else {
+        const field = SORT_FIELD_MAP[next[0].id];
+        if (field) { filters.handleSortChange(field, next[0].desc); }
       }
-    );
-  };
-
-  const handleStatusChange = async (taskId: string, status: TaskStatus) => {
-    try {
-      await updateMutation.mutateAsync({ id: taskId, data: { status } });
-      toast.success("Đã cập nhật trạng thái");
-    } catch (err) {
-      toast.error("Lỗi cập nhật");
-    }
-  };
-
-  const handleAssigneeChange = async (taskId: string, userId: string) => {
-    try {
-      const newAssignees = userId === "unassigned" ? [] : [userId];
-      await updateMutation.mutateAsync({
-        id: taskId,
-        data: { assignees: newAssignees },
-      });
-      toast.success("Đã phân công người phụ trách");
-    } catch (err) {
-      toast.error("Lỗi phân công");
-    }
-  };
-
-  const handleDelete = async (taskId: string) => {
-    if (!confirm("Bạn có chắc muốn xóa dòng này?")) return;
-    try {
-      await deleteMutation.mutateAsync(taskId);
-      toast.success("Đã xóa task");
-    } catch (err) {
-      toast.error("Lỗi xóa task");
-    }
-  };
+    },
+    meta: tableMeta,
+  });
 
   if (isLoadingTasks || isLoadingMembers) {
     return (
@@ -98,61 +75,102 @@ export default function TaskList({ workspaceId }: TaskListProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <h2 className="text-xl font-semibold tracking-tight">Tasks Database</h2>
-
-      <div className="border rounded-xl shadow-sm bg-background">
-        <Table>
-          <TableHeader className="bg-muted/50 pointer-events-none">
-            <TableRow>
-              <TableHead className="w-[50px] text-center">#</TableHead>
-              <TableHead className="min-w-[250px]">Tên công việc</TableHead>
-              <TableHead className="w-[180px]">Trạng thái</TableHead>
-              <TableHead className="w-[220px]">Người phụ trách</TableHead>
-              <TableHead className="w-[110px]">Ngày tạo</TableHead>
-              <TableHead className="w-[110px]">Cập nhật</TableHead>
-              <TableHead className="w-[60px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tasks?.map((task, index) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                index={index}
-                memberships={memberships || []}
-                isUpdating={updateMutation.isPending && updateMutation.variables?.id === task.id}
-                isDeleting={deleteMutation.isPending && deleteMutation.variables === task.id}
-                onStatusChange={handleStatusChange}
-                onAssigneeChange={handleAssigneeChange}
-                onDelete={handleDelete}
-              />
-            ))}
-
-            {/* Add New Row */}
-            <TableRow className="bg-muted/5 hover:bg-muted/10 border-t-border/50">
-              <TableCell className="text-center text-muted-foreground">
-                <Plus className="h-4 w-4 mx-auto opacity-50" />
-              </TableCell>
-              <TableCell colSpan={6} className="p-0">
-                <form
-                  onSubmit={handleCreate}
-                  className="flex h-full w-full items-center px-4 py-2"
-                >
-                  <input
-                    type="text"
-                    placeholder="Thêm một dòng mới... (Nhấn Enter để lưu)"
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    className="flex-1 bg-transparent border-none text-sm font-medium outline-none placeholder:text-muted-foreground focus:ring-0"
-                  />
-                  <button type="submit" className="hidden" />
-                </form>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+      <TaskFilters
+        search={filters.searchInput}
+        selectedStatuses={queryParams.statuses ?? []}
+        selectedAssignees={queryParams.assignees ?? []}
+        memberships={memberships ?? []}
+        onSearchChange={filters.handleSearchChange}
+        onStatusToggle={filters.handleStatusToggle}
+        onAssigneeToggle={filters.handleAssigneeToggle}
+        onClearAll={filters.handleClearFilters}
+      />
+      <div className="border rounded-xl shadow-sm bg-background overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/50">
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((header) => (
+                    <TableHead key={header.id} className={getHeaderClass(header.id)}>
+                      {header.column.getCanSort() ? (
+                        <button
+                          onClick={header.column.getToggleSortingHandler()}
+                          className="flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer"
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          <SortIcon direction={header.column.getIsSorted()} />
+                        </button>
+                      ) : (
+                        flexRender(header.column.columnDef.header, header.getContext())
+                      )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} className="group transition-colors hover:bg-muted/30">
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className={getCellClass(cell.column.id)}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+              <TableRow className="bg-muted/5 hover:bg-muted/10 border-t-border/50">
+                <TableCell className="text-center text-muted-foreground">
+                  <Plus className="h-4 w-4 mx-auto opacity-50" />
+                </TableCell>
+                <TableCell colSpan={columns.length - 1} className="p-0">
+                  <form onSubmit={actions.handleCreate} className="flex h-full w-full items-center px-4 py-2">
+                    <input
+                      type="text"
+                      placeholder="Thêm một dòng mới... (Nhấn Enter để lưu)"
+                      value={actions.newTaskTitle}
+                      onChange={(e) => actions.setNewTaskTitle(e.target.value)}
+                      className="flex-1 bg-transparent border-none text-sm font-medium outline-none placeholder:text-muted-foreground focus:ring-0"
+                    />
+                  </form>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+        {meta && <TaskPagination meta={meta} onPageChange={filters.handlePageChange} />}
       </div>
     </div>
   );
+}
+
+function getHeaderClass(id: string): string {
+  const base: Record<string, string> = {
+    index: "w-10 text-center",
+    title: "min-w-[180px]",
+    status: "w-[150px]",
+    assignee: "w-[180px]",
+    createdAt: "w-[100px] hidden lg:table-cell",
+    updatedAt: "w-[100px] hidden lg:table-cell",
+    actions: "w-[50px]",
+  };
+  return base[id] ?? "";
+}
+
+function getCellClass(id: string): string {
+  const base: Record<string, string> = {
+    index: "text-center text-muted-foreground tabular-nums",
+    createdAt: "hidden lg:table-cell",
+    updatedAt: "hidden lg:table-cell",
+    actions: "text-right",
+  };
+  return base[id] ?? "";
+}
+
+function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
+  if (direction === "asc") return <ArrowUp className="h-3.5 w-3.5 text-foreground" />;
+  if (direction === "desc") return <ArrowDown className="h-3.5 w-3.5 text-foreground" />;
+  return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />;
 }
