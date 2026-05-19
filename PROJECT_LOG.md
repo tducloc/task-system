@@ -119,7 +119,12 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 - Lưu email vào `oldValue`/`newValue` cho ASSIGNED/UNASSIGNED — immutable log, không cần join lại.
 - Xóa task cascade xóa activity logs trong cùng transaction — không giữ log DELETED cho MVP.
 
+**Vấn đề cần xử lý:**
+- Task delete hiện cascade xóa luôn activity logs → mất traceability. Cần refactor sang **Soft Delete** (`deletedAt` field) để giữ log DELETED và hỗ trợ workspace-level activity feed.
+
 ## 3. Bước tiếp theo (Next up)
-- **Day 14**: Redis setup + Cache task list.
-- **Day 15**: Cache invalidation + consistency testing.
+- **Day 14**: Soft Delete Task + Workspace Activity Log (BE model `WorkspaceActivityLog`, auto-log CRUD workspace + membership changes, FE workspace activity feed).
+- **Day 15**: User Activity Log (BE model `UserActivityLog`, FE user activity UI).
+- **Day 16**: Redis setup + Cache task list.
+- **Day 17**: Cache invalidation + consistency testing.
 
