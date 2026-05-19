@@ -101,8 +101,25 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 - Optimistic update chỉ append khi ở trang cuối còn chỗ; các trường hợp khác chỉ update meta counts.
 - URL là source of truth cho table state, `useState` chỉ dùng cho local input debounce.
 
+### Day 13: Task Activity Log (Đã xong - 2026-05-19)
+**Backend:**
+- **Prisma Schema**: Thêm model `TaskActivityLog` với enum `TaskActivityLogAction` (CREATED, UPDATED, DELETED, ASSIGNED, UNASSIGNED) và `TaskActivityLogField` (title, status). Dùng FK đến Task, User, Workspace.
+- **`ActivityLogsModule`**: Sub-module nested trong `tasks/activity-logs/`. Service có `log()`, `logBulk()`, `getAll()`.
+- **Tích hợp `TasksService`**: Auto-log khi create (CREATED), update (UPDATED per field + ASSIGNED/UNASSIGNED per user), delete (xóa activity logs cùng transaction).
+- **Diff Assignees**: So sánh old vs new assignee arrays, log email thay vì userId (dùng `Map` để resolve).
+- **`GET /workspaces/:workspaceId/tasks/:taskId/activity-logs`**: Trả về logs kèm `user.email`, sort `createdAt DESC`.
+
+**Frontend:**
+- **Types & API Hook**: Thêm `TaskActivityAction` enum, `TaskActivityLog` interface, `useTaskActivityLogsQuery()` hook.
+- **`TaskActivityTimeline.tsx`**: Timeline UI với icon + màu theo action type, mô tả hành động bằng tiếng Việt, format thời gian locale `vi-VN`.
+- **Expandable Rows**: Click vào task row → mở rộng hiển thị activity log bên dưới. `stopPropagation` cho cột interactive (Status, Assignee, Actions).
+
+**Quyết định kỹ thuật:**
+- Thiết kế tách bảng riêng (`TaskActivityLog`) thay vì polymorphic chung — cho phép FK chuẩn, cascade delete, type-safe. Sau này thêm `WorkspaceActivityLog`, `MembershipActivityLog` cùng pattern.
+- Lưu email vào `oldValue`/`newValue` cho ASSIGNED/UNASSIGNED — immutable log, không cần join lại.
+- Xóa task cascade xóa activity logs trong cùng transaction — không giữ log DELETED cho MVP.
+
 ## 3. Bước tiếp theo (Next up)
-- **Day 13**: Activity Log — ghi lại lịch sử thay đổi task (BE model + service auto-log, FE timeline UI).
 - **Day 14**: Redis setup + Cache task list.
 - **Day 15**: Cache invalidation + consistency testing.
 

@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { flexRender, useReactTable, getCoreRowModel, type SortingState } from "@tanstack/react-table";
 import { Loader2, Plus, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import TaskActivityTimeline from "./TaskActivityTimeline";
 import { useTasksQuery } from "./api";
 import { SortBy, OrderBy } from "./types";
 import { useMembershipsQuery } from "@/features/workspaces/api";
@@ -24,6 +25,7 @@ interface TaskListProps {
 }
 
 export default function TaskList({ workspaceId }: TaskListProps) {
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const filters = useTaskFilters();
   const { queryParams } = filters;
 
@@ -112,15 +114,36 @@ export default function TaskList({ workspaceId }: TaskListProps) {
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="group transition-colors hover:bg-muted/30">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className={getCellClass(cell.column.id)}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
+              {table.getRowModel().rows.map((row) => {
+                const taskId = row.original.id;
+                const isExpanded = expandedTaskId === taskId;
+                return (
+                  <Fragment key={row.id}>
+                    <TableRow
+                      className={`group transition-colors hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/20" : ""}`}
+                      onClick={() => setExpandedTaskId(isExpanded ? null : taskId)}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className={getCellClass(cell.column.id)}>
+                          <div onClick={cell.column.id === "actions" || cell.column.id === "status" || cell.column.id === "assignee" ? (e) => e.stopPropagation() : undefined}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow key={`${row.id}-activity`}>
+                        <TableCell colSpan={columns.length} className="bg-muted/10 px-6 py-4">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                            Lịch sử hoạt động
+                          </p>
+                          <TaskActivityTimeline workspaceId={workspaceId} taskId={taskId} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
+                );
+              })}
               <TableRow className="bg-muted/5 hover:bg-muted/10 border-t-border/50">
                 <TableCell className="text-center text-muted-foreground">
                   <Plus className="h-4 w-4 mx-auto opacity-50" />

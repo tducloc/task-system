@@ -7,6 +7,7 @@ import type {
   UpdateTaskInput,
   TaskQueryParams,
   PaginatedResponse,
+  TaskActivityLog,
 } from "./types";
 import { TaskStatus } from "./types";
 import { workspaceKeys } from "@/features/workspaces/api";
@@ -19,6 +20,8 @@ export const taskKeys = {
     ["workspaces", workspaceId, "tasks", params] as const,
   detail: (workspaceId: string, id: string) =>
     ["workspaces", workspaceId, "tasks", id] as const,
+  activityLogs: (workspaceId: string, taskId: string) =>
+    ["workspaces", workspaceId, "tasks", taskId, "activity-logs"] as const,
 };
 
 export function useTasksQuery(workspaceId: string, params: TaskQueryParams) {
@@ -197,5 +200,16 @@ export function useDeleteTaskMutation(
     onSettled: () => {
       qc.invalidateQueries({ queryKey: taskKeys.all(workspaceId) });
     },
+  });
+}
+
+export function useTaskActivityLogsQuery(workspaceId: string, taskId: string | null) {
+  return useQuery({
+    queryKey: taskKeys.activityLogs(workspaceId, taskId!),
+    queryFn: () =>
+      api.get<TaskActivityLog[]>(
+        `/workspaces/${workspaceId}/tasks/${taskId}/activity-logs`
+      ),
+    enabled: Boolean(workspaceId && taskId),
   });
 }

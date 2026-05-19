@@ -27,36 +27,39 @@ enum Role {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String
-  memberships   Membership[]
-  taskAssignees TaskAssignee[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
+  id               String            @id @default(uuid())
+  email            String            @unique
+  password         String
+  memberships      Membership[]
+  taskAssignees    TaskAssignee[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  refreshTokens    RefreshToken[]
+  taskActivityLogs TaskActivityLog[]
 }
 
 model Task {
-  id          String         @id @default(uuid())
-  title       String
-  workspaceId String
-  workspace   Workspace      @relation(fields: [workspaceId], references: [id])
-  status      TaskStatus     @default(TODO)
-  assignees   TaskAssignee[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id               String            @id @default(uuid())
+  title            String
+  workspaceId      String
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id])
+  status           TaskStatus        @default(TODO)
+  assignees        TaskAssignee[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  taskActivityLogs TaskActivityLog[]
 
   @@index([workspaceId])
 }
 
 model Workspace {
-  id          String       @id @default(uuid())
-  name        String
-  tasks       Task[]
-  memberships Membership[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id               String            @id @default(uuid())
+  name             String
+  tasks            Task[]
+  memberships      Membership[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  taskActivityLogs TaskActivityLog[]
 }
 
 model Membership {
@@ -107,4 +110,39 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+enum TaskActivityLogAction {
+  CREATED
+  UPDATED
+  DELETED
+  ASSIGNED
+  UNASSIGNED
+}
+
+enum TaskActivityLogField {
+  title
+  status
+}
+
+model TaskActivityLog {
+  id       String                @id @default(uuid())
+  action   TaskActivityLogAction
+  field    TaskActivityLogField?
+  oldValue String?
+  newValue String?
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([workspaceId])
 }
