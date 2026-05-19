@@ -15,11 +15,11 @@ Day 9: Membership + roles (OWNER/MEMBER) + Workspace Frontend
 Day 10: RBAC guard implementation
 Day 11: Task CRUD with workspace isolation + Task UI (TanStack Query, Optimistic Updates)
 Day 12: Task filtering + sorting + pagination + security hardening + responsive UI
-Day 13: Activity log (model, auto-log task changes, FE timeline UI)
-Day 14: Redis setup + cache task list
-Day 15: Cache invalidation + consistency testing
-Day 16: Queue system (BullMQ) + export tasks job (CSV) + file download API
-Day 17: WebSocket setup + real-time updates + optimize event flow
-Day 18: Logging + error classification
-Day 19: AI integration (summarization/query)
-Day 20: Final refactor + README system design documentation
+Day 13: Task Activity Log (model, auto-log task changes, FE timeline UI) ✅
+Day 14: Soft Delete Task + Workspace Activity Log (model, auto-log workspace/membership changes, FE activity feed)
+Day 15: User Activity Log (model, FE user activity UI)
+Day 16: Redis setup + cache task list
+Day 17: Cache invalidation + consistency testing
+Day 18: Queue system (BullMQ) + export tasks job (CSV) + file download API
+Day 19: WebSocket setup + real-time updates + optimize event flow
+Day 20: Logging + error classification + AI integration (summarization/query) + Final refactor + README
