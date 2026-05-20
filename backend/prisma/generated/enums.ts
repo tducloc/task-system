@@ -26,20 +26,24 @@ export const Role = {
 export type Role = (typeof Role)[keyof typeof Role]
 
 
-export const TaskActivityLogAction = {
+export const ActivityEntityType = {
+  TASK: 'TASK',
+  WORKSPACE: 'WORKSPACE',
+  USER: 'USER'
+} as const
+
+export type ActivityEntityType = (typeof ActivityEntityType)[keyof typeof ActivityEntityType]
+
+
+export const ActivityAction = {
   CREATED: 'CREATED',
   UPDATED: 'UPDATED',
   DELETED: 'DELETED',
+  JOINED: 'JOINED',
+  LEFT: 'LEFT',
+  KICKED: 'KICKED',
   ASSIGNED: 'ASSIGNED',
   UNASSIGNED: 'UNASSIGNED'
 } as const
 
-export type TaskActivityLogAction = (typeof TaskActivityLogAction)[keyof typeof TaskActivityLogAction]
-
-
-export const TaskActivityLogField = {
-  title: 'title',
-  status: 'status'
-} as const
-
-export type TaskActivityLogField = (typeof TaskActivityLogField)[keyof typeof TaskActivityLogField]
+export type ActivityAction = (typeof ActivityAction)[keyof typeof ActivityAction]

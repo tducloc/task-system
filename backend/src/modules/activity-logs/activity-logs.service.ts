@@ -1,32 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
+import { Prisma } from 'prisma/generated/client';
+
 import { PrismaService } from '@/database/prisma.service';
 import { checkIsPrismaError } from '@/utils/errors';
 
-import { CreateActivityLogDto } from './dto/create-activity-log.dto';
+import { ActivityLogInput } from './types';
 
 @Injectable()
 export class ActivityLogsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async log({
-    userId,
-    taskId,
-    workspaceId,
-    data,
-  }: {
-    userId: string;
-    taskId: string;
-    workspaceId: string;
-    data: CreateActivityLogDto;
-  }) {
+  async log(data: ActivityLogInput) {
     try {
-      return await this.prisma.taskActivityLog.create({
+      return await this.prisma.activityLog.create({
         data: {
-          userId,
-          taskId,
-          workspaceId,
           ...data,
+          metadata: data.metadata
+            ? (data.metadata as Prisma.InputJsonValue)
+            : undefined,
         },
       });
     } catch (e) {
@@ -70,7 +62,7 @@ export class ActivityLogsService {
     workspaceId: string;
     taskId: string;
   }) {
-    return await this.prisma.taskActivityLog.findMany({
+    return await this.prisma.activityLog.findMany({
       where: {
         taskId,
         workspaceId,
