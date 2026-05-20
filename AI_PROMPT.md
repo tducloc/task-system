@@ -23,7 +23,7 @@
   - **Title Format:** Dùng cấu trúc `[TAG] Subject`.
     - **TAG**: Là `<release-name>` viết hoa. (VD: `release/mvp/...` -> `[MVP]`, `hotfix/v1.3.1.hf/...` -> `[V1.3.1.HF]`).
     - **Subject**: Viết hoa chữ cái đầu, không có dấu chấm ở cuối câu.
-    - **Ví dụ chuẩn:** `[MVP] feat: Add Workspace module` hoặc `[CHOCO] fix: Fix login crash`.
+    - **Ví dụ chuẩn:** `[MVP] Add Workspace module` hoặc `[CHOCO] Fix login crash`.
 - **PROJECT_LOG Workflow:**
   - **Khi bắt đầu conversation mới:** AI PHẢI đọc file `PROJECT_LOG.md` để nắm tiến độ hiện tại trước khi làm bất cứ điều gì.
   - **Khi kết thúc ngày (hoặc khi user yêu cầu):** AI PHẢI cập nhật `PROJECT_LOG.md` với những gì đã làm trong ngày hôm đó, bao gồm:

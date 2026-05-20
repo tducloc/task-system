@@ -144,6 +144,40 @@ export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedStringNullableFilter<$PrismaModel>
 }
 
+export type EnumTaskActivityLogActionFilter<$PrismaModel = never> = {
+  equals?: $Enums.TaskActivityLogAction | Prisma.EnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  in?: $Enums.TaskActivityLogAction[] | Prisma.ListEnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TaskActivityLogAction[] | Prisma.ListEnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTaskActivityLogActionFilter<$PrismaModel> | $Enums.TaskActivityLogAction
+}
+
+export type EnumTaskActivityLogFieldNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.TaskActivityLogField | Prisma.EnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  in?: $Enums.TaskActivityLogField[] | Prisma.ListEnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.TaskActivityLogField[] | Prisma.ListEnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumTaskActivityLogFieldNullableFilter<$PrismaModel> | $Enums.TaskActivityLogField | null
+}
+
+export type EnumTaskActivityLogActionWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TaskActivityLogAction | Prisma.EnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  in?: $Enums.TaskActivityLogAction[] | Prisma.ListEnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TaskActivityLogAction[] | Prisma.ListEnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTaskActivityLogActionWithAggregatesFilter<$PrismaModel> | $Enums.TaskActivityLogAction
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTaskActivityLogActionFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTaskActivityLogActionFilter<$PrismaModel>
+}
+
+export type EnumTaskActivityLogFieldNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TaskActivityLogField | Prisma.EnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  in?: $Enums.TaskActivityLogField[] | Prisma.ListEnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.TaskActivityLogField[] | Prisma.ListEnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumTaskActivityLogFieldNullableWithAggregatesFilter<$PrismaModel> | $Enums.TaskActivityLogField | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTaskActivityLogFieldNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTaskActivityLogFieldNullableFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -285,6 +319,40 @@ export type NestedIntNullableFilter<$PrismaModel = never> = {
   gt?: number | Prisma.IntFieldRefInput<$PrismaModel>
   gte?: number | Prisma.IntFieldRefInput<$PrismaModel>
   not?: Prisma.NestedIntNullableFilter<$PrismaModel> | number | null
+}
+
+export type NestedEnumTaskActivityLogActionFilter<$PrismaModel = never> = {
+  equals?: $Enums.TaskActivityLogAction | Prisma.EnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  in?: $Enums.TaskActivityLogAction[] | Prisma.ListEnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TaskActivityLogAction[] | Prisma.ListEnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTaskActivityLogActionFilter<$PrismaModel> | $Enums.TaskActivityLogAction
+}
+
+export type NestedEnumTaskActivityLogFieldNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.TaskActivityLogField | Prisma.EnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  in?: $Enums.TaskActivityLogField[] | Prisma.ListEnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.TaskActivityLogField[] | Prisma.ListEnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumTaskActivityLogFieldNullableFilter<$PrismaModel> | $Enums.TaskActivityLogField | null
+}
+
+export type NestedEnumTaskActivityLogActionWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TaskActivityLogAction | Prisma.EnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  in?: $Enums.TaskActivityLogAction[] | Prisma.ListEnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TaskActivityLogAction[] | Prisma.ListEnumTaskActivityLogActionFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTaskActivityLogActionWithAggregatesFilter<$PrismaModel> | $Enums.TaskActivityLogAction
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTaskActivityLogActionFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTaskActivityLogActionFilter<$PrismaModel>
+}
+
+export type NestedEnumTaskActivityLogFieldNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TaskActivityLogField | Prisma.EnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  in?: $Enums.TaskActivityLogField[] | Prisma.ListEnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.TaskActivityLogField[] | Prisma.ListEnumTaskActivityLogFieldFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumTaskActivityLogFieldNullableWithAggregatesFilter<$PrismaModel> | $Enums.TaskActivityLogField | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTaskActivityLogFieldNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTaskActivityLogFieldNullableFilter<$PrismaModel>
 }
 
 

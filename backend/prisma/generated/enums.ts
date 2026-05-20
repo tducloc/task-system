@@ -24,3 +24,22 @@ export const Role = {
 } as const
 
 export type Role = (typeof Role)[keyof typeof Role]
+
+
+export const TaskActivityLogAction = {
+  CREATED: 'CREATED',
+  UPDATED: 'UPDATED',
+  DELETED: 'DELETED',
+  ASSIGNED: 'ASSIGNED',
+  UNASSIGNED: 'UNASSIGNED'
+} as const
+
+export type TaskActivityLogAction = (typeof TaskActivityLogAction)[keyof typeof TaskActivityLogAction]
+
+
+export const TaskActivityLogField = {
+  title: 'title',
+  status: 'status'
+} as const
+
+export type TaskActivityLogField = (typeof TaskActivityLogField)[keyof typeof TaskActivityLogField]

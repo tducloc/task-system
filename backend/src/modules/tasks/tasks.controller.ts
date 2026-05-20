@@ -12,6 +12,7 @@ import {
 
 import { Role } from 'prisma/generated/enums';
 
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceRoles } from '../auth/decorators/workspace-roles.decorator';
 import { WorkspaceRoleGuard } from '../auth/guards/workspace-role.guard';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -28,9 +29,14 @@ export class TasksController {
   @WorkspaceRoles(Role.MEMBER, Role.OWNER)
   create(
     @Param('workspaceId') workspaceId: string,
+    @CurrentUser() user: any,
     @Body() data: CreateTaskDto,
   ) {
-    return this.tasksService.create(workspaceId, data);
+    return this.tasksService.create({
+      userId: user.sub,
+      workspaceId,
+      data,
+    });
   }
 
   @Get()
@@ -56,15 +62,25 @@ export class TasksController {
   update(
     @Param('workspaceId') workspaceId: string,
     @Param('id') id: string,
+    @CurrentUser() user: any,
     @Body() data: UpdateTaskDto,
   ) {
-    return this.tasksService.update(id, workspaceId, data);
+    return this.tasksService.update({
+      id,
+      workspaceId,
+      userId: user.sub,
+      data,
+    });
   }
 
   @Delete(':id')
   @UseGuards(WorkspaceRoleGuard)
   @WorkspaceRoles(Role.MEMBER, Role.OWNER)
-  delete(@Param('workspaceId') workspaceId: string, @Param('id') id: string) {
-    return this.tasksService.delete(id, workspaceId);
+  delete(
+    @Param('workspaceId') workspaceId: string,
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.tasksService.delete({ id, userId: user.sub, workspaceId });
   }
 }

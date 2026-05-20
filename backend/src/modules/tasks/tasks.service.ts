@@ -1,22 +1,40 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from 'prisma/generated/client';
-import { TaskStatus } from 'prisma/generated/enums';
+import {
+  TaskActivityLogAction,
+  TaskActivityLogField,
+  TaskStatus,
+} from 'prisma/generated/enums';
+import { text } from 'stream/consumers';
 
 import { PrismaService } from '@/database/prisma.service';
 import { OrderBy } from '@/types/sorts';
 import { checkIsPrismaError } from '@/utils/errors';
 
+import { ActivityLogsService } from './activity-logs/activity-logs.service';
+import { CreateActivityLogDto } from './activity-logs/dto/create-activity-log.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { QueryTaskDto, SortBy } from './dto/query-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLogs: ActivityLogsService,
+  ) {}
 
-  async create(workspaceId: string, data: CreateTaskDto) {
-    return this.prisma.$transaction(async (tx) => {
+  async create({
+    userId,
+    workspaceId,
+    data,
+  }: {
+    userId: string;
+    workspaceId: string;
+    data: CreateTaskDto;
+  }) {
+    const newTask = await this.prisma.$transaction(async (tx) => {
       // Create task
       const { assignees = [], ...taskData } = data;
       const task = await tx.task.create({
@@ -43,13 +61,20 @@ export class TasksService {
 
       return task;
     });
+
+    await this.activityLogs.log({
+      userId,
+      workspaceId,
+      taskId: newTask.id,
+      data: {
+        action: TaskActivityLogAction.CREATED,
+      },
+    });
+
+    return newTask;
   }
 
   async getAll(workspaceId: string, query: QueryTaskDto) {
-    // Sort
-
-    // Filter
-
     const {
       page,
       limit,
@@ -83,7 +108,6 @@ export class TasksService {
         },
       },
 
-      // Page
       skip: (query.page - 1) * limit,
       take: limit,
     });
@@ -118,47 +142,143 @@ export class TasksService {
     return task;
   }
 
-  async update(id: string, workspaceId: string, data: UpdateTaskDto) {
-    return this.prisma.$transaction(async (tx) => {
-      try {
-        const { assignees, ...taskData } = data;
+  async update({
+    id,
+    userId,
+    workspaceId,
+    data,
+  }: {
+    id: string;
+    userId: string;
+    workspaceId: string;
+    data: UpdateTaskDto;
+  }) {
+    const oldTask = await this.prisma.task.findUnique({
+      where: {
+        id,
+        workspaceId,
+      },
+      include: {
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-        const updatedTask = await tx.task.update({
-          where: { id, workspaceId },
-          data: taskData,
+    if (!oldTask) {
+      throw new NotFoundException('Task not found');
+    }
+
+    const updatedTask = await this.prisma.$transaction(async (tx) => {
+      const { assignees, ...taskData } = data;
+
+      const updatedTask = await tx.task.update({
+        where: { id, workspaceId },
+        data: taskData,
+      });
+
+      if (assignees) {
+        // Delete all old assignee record
+        await tx.taskAssignee.deleteMany({
+          where: { taskId: id },
         });
 
-        if (assignees) {
-          // Delete all old assignee record
-          await tx.taskAssignee.deleteMany({
-            where: { taskId: id },
+        const assigneesData = assignees.map((userId) => {
+          return {
+            taskId: id,
+            userId,
+          };
+        });
+
+        if (assigneesData.length > 0) {
+          // Create new one
+          await tx.taskAssignee.createMany({
+            data: assigneesData,
           });
-
-          const assigneesData = assignees.map((userId) => {
-            return {
-              taskId: id,
-              userId,
-            };
-          });
-
-          if (assigneesData.length > 0) {
-            // Create new one
-            await tx.taskAssignee.createMany({
-              data: assigneesData,
-            });
-          }
-        }
-
-        return updatedTask;
-      } catch (e) {
-        if (checkIsPrismaError(e) && e.code === 'P2025') {
-          throw new NotFoundException('Task not found');
         }
       }
+
+      return updatedTask;
     });
+
+    const logData: CreateActivityLogDto[] = [];
+
+    const keys = Object.keys(data).filter(
+      (key) => !['assignees'].includes(key),
+    );
+
+    for (const key of keys) {
+      const value = data[key];
+      logData.push({
+        action: TaskActivityLogAction.UPDATED,
+        field: key as TaskActivityLogField,
+        oldValue: oldTask[key],
+        newValue: value,
+      });
+    }
+
+    if (data.assignees) {
+      const oldIds = oldTask.assignees.map((assignee) => assignee.userId);
+      const unassigned = oldIds.filter((id) => !data.assignees?.includes(id));
+      const assigned = data.assignees.filter((id) => !oldIds.includes(id));
+
+      const oldEmailMap = new Map(
+        oldTask.assignees.map((a) => [a.userId, a.user.email]),
+      );
+
+      const newUsers = await this.prisma.user.findMany({
+        where: {
+          id: { in: assigned },
+        },
+        select: { id: true, email: true },
+      });
+
+      const newEmailMap = new Map(newUsers.map((u) => [u.id, u.email]));
+
+      for (const id of unassigned) {
+        logData.push({
+          action: TaskActivityLogAction.UNASSIGNED,
+          oldValue: oldEmailMap.get(id),
+          newValue: null,
+        });
+      }
+
+      for (const id of assigned) {
+        logData.push({
+          action: TaskActivityLogAction.ASSIGNED,
+          oldValue: null,
+          newValue: newEmailMap.get(id),
+        });
+      }
+    }
+
+    // Add bulk logs
+    await this.activityLogs.logBulk({
+      userId,
+      workspaceId,
+      taskId: oldTask.id,
+      data: logData,
+    });
+
+    return updatedTask;
   }
 
-  async delete(id: string, workspaceId: string) {
+  async delete({
+    id,
+    userId,
+    workspaceId,
+  }: {
+    id: string;
+    userId: string;
+    workspaceId: string;
+  }) {
     const task = await this.prisma.task.findFirst({
       where: { id, workspaceId },
     });
@@ -167,22 +287,23 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      try {
-        // Delete all assignee records
-        await tx.taskAssignee.deleteMany({
-          where: { taskId: id },
-        });
+    const deletedTask = await this.prisma.$transaction(async (tx) => {
+      // Delete all assignee records
+      await tx.taskAssignee.deleteMany({
+        where: { taskId: id },
+      });
 
-        // Delete tasks
-        return await tx.task.delete({
-          where: { id, workspaceId },
-        });
-      } catch (e) {
-        if (checkIsPrismaError(e) && e.code === 'P2025') {
-          throw new NotFoundException('Task not found');
-        }
-      }
+      // Delete all acitivity records
+      await tx.taskActivityLog.deleteMany({
+        where: { taskId: id, workspaceId },
+      });
+
+      // Delete tasks
+      return await tx.task.delete({
+        where: { id, workspaceId },
+      });
     });
+
+    return deletedTask;
   }
 }

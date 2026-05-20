@@ -56,7 +56,8 @@ export const ModelName = {
   Workspace: 'Workspace',
   Membership: 'Membership',
   TaskAssignee: 'TaskAssignee',
-  RefreshToken: 'RefreshToken'
+  RefreshToken: 'RefreshToken',
+  TaskActivityLog: 'TaskActivityLog'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -142,6 +143,21 @@ export const RefreshTokenScalarFieldEnum = {
 } as const
 
 export type RefreshTokenScalarFieldEnum = (typeof RefreshTokenScalarFieldEnum)[keyof typeof RefreshTokenScalarFieldEnum]
+
+
+export const TaskActivityLogScalarFieldEnum = {
+  id: 'id',
+  action: 'action',
+  field: 'field',
+  oldValue: 'oldValue',
+  newValue: 'newValue',
+  taskId: 'taskId',
+  userId: 'userId',
+  workspaceId: 'workspaceId',
+  createdAt: 'createdAt'
+} as const
+
+export type TaskActivityLogScalarFieldEnum = (typeof TaskActivityLogScalarFieldEnum)[keyof typeof TaskActivityLogScalarFieldEnum]
 
 
 export const SortOrder = {
