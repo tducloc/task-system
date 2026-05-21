@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from 'prisma/generated/client';
 import {
+  ActivityAction,
+  ActivityEntityType,
   // TaskActivityLogAction,
   // TaskActivityLogField,
   TaskStatus,
@@ -10,6 +12,8 @@ import {
 import { PrismaService } from '@/database/prisma.service';
 import { OrderBy } from '@/types/sorts';
 
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { ActivityLogInput } from '../activity-logs/types';
 // import { ActivityLogsService } from './activity-logs/activity-logs.service';
 // import { CreateActivityLogDto } from './activity-logs/dto/create-activity-log.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -20,7 +24,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
-    // private readonly activityLogs: ActivityLogsService,
+    private readonly activityLogs: ActivityLogsService,
   ) {}
 
   async create({
@@ -60,14 +64,13 @@ export class TasksService {
       return task;
     });
 
-    // await this.activityLogs.log({
-    //   userId,
-    //   workspaceId,
-    //   taskId: newTask.id,
-    //   data: {
-    //     action: TaskActivityLogAction.CREATED,
-    //   },
-    // });
+    await this.activityLogs.log({
+      entityId: newTask.id,
+      entityType: ActivityEntityType.TASK,
+      action: ActivityAction.CREATED,
+      actorUserId: userId,
+      workspaceId,
+    });
 
     return newTask;
   }
@@ -208,63 +211,68 @@ export class TasksService {
       return updatedTask;
     });
 
-    // const logData: CreateActivityLogDto[] = [];
+    const logData: ActivityLogInput[] = [];
 
-    // const keys = Object.keys(data).filter(
-    //   (key) => !['assignees'].includes(key),
-    // );
+    const keys = Object.keys(data).filter(
+      (key) => !['assignees'].includes(key),
+    );
 
-    // for (const key of keys) {
-    //   logData.push({
-    //     action: TaskActivityLogAction.UPDATED,
-    //     field: key as TaskActivityLogField,
-    //     oldValue: String(oldTask[key]),
-    //     newValue: String(data[key]),
-    //   });
-    // }
+    const common = {
+      entityId: oldTask.id,
+      entityType: ActivityEntityType.TASK,
+      actorUserId: userId,
+      workspaceId,
+    };
 
-    // if (data.assignees) {
-    //   const oldIds = oldTask.assignees.map((assignee) => assignee.userId);
-    //   const unassigned = oldIds.filter((id) => !data.assignees?.includes(id));
-    //   const assigned = data.assignees.filter((id) => !oldIds.includes(id));
+    for (const key of keys) {
+      logData.push({
+        ...common,
+        action: ActivityAction.UPDATED,
+        field: key,
+        oldValue: String(oldTask[key]),
+        newValue: String(data[key]),
+      });
+    }
 
-    //   const oldEmailMap = new Map(
-    //     oldTask.assignees.map((a) => [a.userId, a.user.email]),
-    //   );
+    if (data.assignees) {
+      const oldIds = oldTask.assignees.map((assignee) => assignee.userId);
+      const unassigned = oldIds.filter((id) => !data.assignees?.includes(id));
+      const assigned = data.assignees.filter((id) => !oldIds.includes(id));
 
-    //   const newUsers = await this.prisma.user.findMany({
-    //     where: {
-    //       id: { in: assigned },
-    //     },
-    //     select: { id: true, email: true },
-    //   });
+      const oldEmailMap = new Map(
+        oldTask.assignees.map((a) => [a.userId, a.user.email]),
+      );
 
-    //   const newEmailMap = new Map(newUsers.map((u) => [u.id, u.email]));
+      const newUsers = await this.prisma.user.findMany({
+        where: {
+          id: { in: assigned },
+        },
+        select: { id: true, email: true },
+      });
 
-    //   for (const id of unassigned) {
-    //     logData.push({
-    //       action: TaskActivityLogAction.UNASSIGNED,
-    //       oldValue: oldEmailMap.get(id),
-    //       newValue: null,
-    //     });
-    //   }
+      const newEmailMap = new Map(newUsers.map((u) => [u.id, u.email]));
 
-    //   for (const id of assigned) {
-    //     logData.push({
-    //       action: TaskActivityLogAction.ASSIGNED,
-    //       oldValue: null,
-    //       newValue: newEmailMap.get(id),
-    //     });
-    //   }
-    // }
+      for (const id of unassigned) {
+        logData.push({
+          ...common,
+          action: ActivityAction.UNASSIGNED,
+          oldValue: oldEmailMap.get(id),
+          newValue: null,
+        });
+      }
 
-    // // Add bulk logs
-    // await this.activityLogs.logBulk({
-    //   userId,
-    //   workspaceId,
-    //   taskId: oldTask.id,
-    //   data: logData,
-    // });
+      for (const id of assigned) {
+        logData.push({
+          ...common,
+          action: ActivityAction.ASSIGNED,
+          oldValue: null,
+          newValue: newEmailMap.get(id),
+        });
+      }
+    }
+
+    // Add bulk logs
+    await this.activityLogs.logBulk(logData);
 
     return updatedTask;
   }
@@ -289,6 +297,14 @@ export class TasksService {
     const deletedTask = await this.prisma.task.update({
       where: { id, workspaceId },
       data: { deletedAt: new Date() },
+    });
+
+    await this.activityLogs.log({
+      entityId: deletedTask.id,
+      entityType: ActivityEntityType.TASK,
+      action: ActivityAction.DELETED,
+      actorUserId: userId,
+      workspaceId,
     });
 
     return deletedTask;

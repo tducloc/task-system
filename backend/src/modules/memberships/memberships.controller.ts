@@ -10,7 +10,10 @@ import {
 
 import { Role } from 'prisma/generated/enums';
 
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  type AuthenticatedUser,
+  CurrentUser,
+} from '../auth/decorators/current-user.decorator';
 import { WorkspaceRoles } from '../auth/decorators/workspace-roles.decorator';
 import { WorkspaceRoleGuard } from '../auth/guards/workspace-role.guard';
 import { UpdateMembershipDto } from './dto/update-membership.dto';
@@ -34,8 +37,10 @@ export class MembershipsController {
     @Param('id') id: string,
     @Param('workspaceId') workspaceId: string,
     @Body() updateMembershipDto: UpdateMembershipDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.membershipsService.update({
+      userId: user.sub,
       workspaceId,
       membershipId: id,
       data: updateMembershipDto,
@@ -46,7 +51,7 @@ export class MembershipsController {
   @UseGuards(WorkspaceRoleGuard)
   @WorkspaceRoles(Role.OWNER, Role.MEMBER)
   remove(
-    @CurrentUser() currentUser,
+    @CurrentUser() currentUser: AuthenticatedUser,
     @Param('id') id: string,
     @Param('workspaceId') workspaceId: string,
   ) {

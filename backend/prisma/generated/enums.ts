@@ -29,7 +29,8 @@ export type Role = (typeof Role)[keyof typeof Role]
 export const ActivityEntityType = {
   TASK: 'TASK',
   WORKSPACE: 'WORKSPACE',
-  USER: 'USER'
+  USER: 'USER',
+  MEMBERSHIP: 'MEMBERSHIP'
 } as const
 
 export type ActivityEntityType = (typeof ActivityEntityType)[keyof typeof ActivityEntityType]

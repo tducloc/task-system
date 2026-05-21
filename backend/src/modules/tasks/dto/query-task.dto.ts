@@ -2,8 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
-  IsNotEmpty,
-  IsNumber,
+  IsInt,
   IsOptional,
   IsString,
   MaxLength,
@@ -24,15 +23,15 @@ export class QueryTaskDto {
   // Page
   @Min(1)
   @Type(() => Number)
-  @IsNumber()
-  @IsNotEmpty()
-  page: number;
+  @IsInt()
+  @IsOptional()
+  page: number = 1;
 
   @Min(1)
   @Type(() => Number)
-  @IsNumber()
-  @IsNotEmpty()
-  limit: number;
+  @IsInt()
+  @IsOptional()
+  limit: number = 20;
 
   // Sort
   @IsEnum(SortBy)
@@ -44,13 +43,21 @@ export class QueryTaskDto {
   orderBy?: OrderBy;
 
   // Filter
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  @Transform(({ value }) =>
+    value === undefined || value === null
+      ? undefined
+      : ((Array.isArray(value) ? value : [value]) as TaskStatus[]),
+  )
   @IsArray()
   @IsEnum(TaskStatus, { each: true })
   @IsOptional()
   statuses?: TaskStatus[];
 
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  @Transform(({ value }) =>
+    value === undefined || value === null
+      ? undefined
+      : ((Array.isArray(value) ? value : [value]) as string[]),
+  )
   @IsArray()
   @IsString({ each: true })
   @IsOptional()

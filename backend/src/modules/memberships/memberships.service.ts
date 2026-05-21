@@ -4,17 +4,26 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { Role } from 'prisma/generated/enums';
+import type { Prisma } from 'prisma/generated/client';
+import {
+  ActivityAction,
+  ActivityEntityType,
+  Role,
+} from 'prisma/generated/enums';
 
 import { PrismaService } from '@/database/prisma.service';
 
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { UpdateMembershipDto } from './dto/update-membership.dto';
 
 @Injectable()
 export class MembershipsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLogs: ActivityLogsService,
+  ) {}
 
-  private async getMembership(tx: any, id: string) {
+  private async getMembership(tx: Prisma.TransactionClient, id: string) {
     const membership = await tx.membership.findUnique({
       where: { id },
     });
@@ -26,7 +35,11 @@ export class MembershipsService {
     return membership;
   }
 
-  private async checkIsOwner(tx: any, workspaceId: string, userId: string) {
+  private async checkIsOwner(
+    tx: Prisma.TransactionClient,
+    workspaceId: string,
+    userId: string,
+  ) {
     const membership = await tx.membership.findUnique({
       where: { userId_workspaceId: { userId, workspaceId } },
     });
@@ -43,7 +56,7 @@ export class MembershipsService {
   }
 
   private async ensureTargetNotLastOwner(
-    tx: any,
+    tx: Prisma.TransactionClient,
     workspaceId: string,
     role: Role,
   ) {
@@ -79,15 +92,25 @@ export class MembershipsService {
   }
 
   async update({
+    userId,
     workspaceId,
     membershipId,
     data,
   }: {
+    userId: string;
     workspaceId: string;
     membershipId: string;
     data: UpdateMembershipDto;
   }) {
-    return this.prisma.$transaction(async (tx) => {
+    const old = await this.prisma.membership.findUnique({
+      where: { id: membershipId },
+    });
+
+    if (!old) {
+      throw new NotFoundException('Membership not found');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
       const targetMembership = await this.getMembership(tx, membershipId);
 
       if (data.role === Role.MEMBER) {
@@ -103,9 +126,23 @@ export class MembershipsService {
         data: { role: data.role },
       });
     });
+
+    await this.activityLogs.log({
+      entityId: membershipId,
+      entityType: ActivityEntityType.MEMBERSHIP,
+      action: ActivityAction.UPDATED,
+      workspaceId,
+      actorUserId: userId,
+      targetUserId: updated.userId,
+      field: 'role',
+      oldValue: old.role,
+      newValue: data.role,
+    });
+
+    return updated;
   }
 
-  remove({
+  async remove({
     currentUserId,
     workspaceId,
     membershipId,
@@ -114,11 +151,12 @@ export class MembershipsService {
     workspaceId: string;
     membershipId: string;
   }) {
-    return this.prisma.$transaction(async (tx) => {
+    const removed = await this.prisma.$transaction(async (tx) => {
       const targetMembership = await this.getMembership(tx, membershipId);
+      const isSelfLeave = targetMembership.userId === currentUserId;
 
       // Delete yourself
-      if (targetMembership.userId === currentUserId) {
+      if (isSelfLeave) {
         await this.ensureTargetNotLastOwner(
           tx,
           workspaceId,
@@ -130,9 +168,22 @@ export class MembershipsService {
         await this.checkIsOwner(tx, workspaceId, currentUserId);
       }
 
-      return await tx.membership.delete({
+      const deleted = await tx.membership.delete({
         where: { id: membershipId },
       });
+
+      return { deleted, isSelfLeave };
     });
+
+    await this.activityLogs.log({
+      entityId: membershipId,
+      entityType: ActivityEntityType.MEMBERSHIP,
+      action: removed.isSelfLeave ? ActivityAction.LEFT : ActivityAction.KICKED,
+      workspaceId,
+      actorUserId: currentUserId,
+      targetUserId: removed.deleted.userId,
+    });
+
+    return removed.deleted;
   }
 }

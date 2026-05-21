@@ -119,6 +119,7 @@ enum ActivityEntityType {
   TASK
   WORKSPACE
   USER
+  MEMBERSHIP
 }
 
 enum ActivityAction {

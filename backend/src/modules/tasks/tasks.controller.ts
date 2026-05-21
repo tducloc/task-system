@@ -12,7 +12,10 @@ import {
 
 import { Role } from 'prisma/generated/enums';
 
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  type AuthenticatedUser,
+  CurrentUser,
+} from '../auth/decorators/current-user.decorator';
 import { WorkspaceRoles } from '../auth/decorators/workspace-roles.decorator';
 import { WorkspaceRoleGuard } from '../auth/guards/workspace-role.guard';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -29,7 +32,7 @@ export class TasksController {
   @WorkspaceRoles(Role.MEMBER, Role.OWNER)
   create(
     @Param('workspaceId') workspaceId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() data: CreateTaskDto,
   ) {
     return this.tasksService.create({
@@ -62,7 +65,7 @@ export class TasksController {
   update(
     @Param('workspaceId') workspaceId: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() data: UpdateTaskDto,
   ) {
     return this.tasksService.update({
@@ -79,7 +82,7 @@ export class TasksController {
   delete(
     @Param('workspaceId') workspaceId: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.tasksService.delete({ id, userId: user.sub, workspaceId });
   }
