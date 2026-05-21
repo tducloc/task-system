@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import InfiniteScroll from 'react-infinite-scroll-component';
 import { Loader2 } from 'lucide-react';
 
 import {
@@ -24,19 +25,19 @@ const ENTITY_TYPE_OPTIONS: { value: ActivityEntityType | 'ALL'; label: string }[
   { value: ActivityEntityType.TASK, label: 'Task' },
 ];
 
+const SCROLL_TARGET_ID = 'workspace-activity-feed-scroll';
+
 interface WorkspaceActivityFeedProps {
   workspaceId: string;
 }
 
 export default function WorkspaceActivityFeed({ workspaceId }: WorkspaceActivityFeedProps) {
   const [entityFilter, setEntityFilter] = useState<ActivityEntityType | 'ALL'>('ALL');
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const {
     data,
     isLoading,
     hasNextPage,
-    isFetchingNextPage,
     fetchNextPage,
   } = useWorkspaceActivityLogsInfiniteQuery(workspaceId, {
     entityType: entityFilter === 'ALL' ? undefined : entityFilter,
@@ -44,23 +45,6 @@ export default function WorkspaceActivityFeed({ workspaceId }: WorkspaceActivity
 
   const logs = data?.pages.flatMap((page) => page.data) ?? [];
   const total = data?.pages[0]?.meta.total ?? 0;
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !hasNextPage || isFetchingNextPage) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          fetchNextPage();
-        }
-      },
-      { rootMargin: '100px' },
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <div className="flex flex-col h-full">
@@ -87,7 +71,7 @@ export default function WorkspaceActivityFeed({ workspaceId }: WorkspaceActivity
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto -mx-2 px-2">
+      <div id={SCROLL_TARGET_ID} className="flex-1 overflow-y-auto -mx-2 px-2">
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -97,51 +81,51 @@ export default function WorkspaceActivityFeed({ workspaceId }: WorkspaceActivity
             Chưa có hoạt động nào.
           </p>
         ) : (
-          <>
-            <div className="space-y-0">
-              {logs.map((log, index) => {
-                const { icon: Icon, color } = getActivityVisual(log);
-                const isLast = index === logs.length - 1 && !hasNextPage;
+          <InfiniteScroll
+            dataLength={logs.length}
+            next={fetchNextPage}
+            hasMore={Boolean(hasNextPage)}
+            scrollableTarget={SCROLL_TARGET_ID}
+            loader={
+              <div className="flex justify-center py-2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            }
+            endMessage={
+              <p className="text-center text-xs text-muted-foreground py-3">
+                Đã hết hoạt động
+              </p>
+            }
+          >
+            {logs.map((log, index) => {
+              const { icon: Icon, color } = getActivityVisual(log);
+              const isLast = index === logs.length - 1 && !hasNextPage;
 
-                return (
-                  <div key={log.id} className="flex gap-3 relative">
-                    {!isLast && (
-                      <div className="absolute left-[11px] top-7 bottom-0 w-px bg-border" />
-                    )}
-                    <div
-                      className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted ${color}`}
-                    >
-                      <Icon className="h-3 w-3" />
-                    </div>
-                    <div className="flex-1 pb-4 min-w-0">
-                      <p className="text-sm leading-snug">
-                        <span className="font-medium">{log.actor.email}</span>{' '}
-                        <span className="text-muted-foreground">
-                          {getActivityDescription(log)}
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {activityTimeFormatter.format(new Date(log.createdAt))}
-                      </p>
-                    </div>
+              return (
+                <div key={log.id} className="flex gap-3 relative">
+                  {!isLast && (
+                    <div className="absolute left-[11px] top-7 bottom-0 w-px bg-border" />
+                  )}
+                  <div
+                    className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted ${color}`}
+                  >
+                    <Icon className="h-3 w-3" />
                   </div>
-                );
-              })}
-            </div>
-
-            <div ref={sentinelRef} className="py-2">
-              {isFetchingNextPage && (
-                <div className="flex justify-center">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <div className="flex-1 pb-4 min-w-0">
+                    <p className="text-sm leading-snug">
+                      <span className="font-medium">{log.actor.email}</span>{' '}
+                      <span className="text-muted-foreground">
+                        {getActivityDescription(log)}
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {activityTimeFormatter.format(new Date(log.createdAt))}
+                    </p>
+                  </div>
                 </div>
-              )}
-              {!hasNextPage && logs.length > 0 && (
-                <p className="text-center text-xs text-muted-foreground py-2">
-                  Đã hết hoạt động
-                </p>
-              )}
-            </div>
-          </>
+              );
+            })}
+          </InfiniteScroll>
         )}
       </div>
     </div>
