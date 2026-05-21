@@ -11,6 +11,7 @@ import type {
 import { TaskStatus } from "./types";
 import { workspaceKeys } from "@/features/workspaces/api";
 import type { Membership } from "@/features/workspaces/types";
+import { activityLogKeys } from "@/features/activity-logs/api";
 
 export const taskKeys = {
   all: (workspaceId: string) => ["workspaces", workspaceId, "tasks"] as const,
@@ -96,6 +97,7 @@ export function useCreateTaskMutation(
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: taskKeys.all(workspaceId) });
+      qc.invalidateQueries({ queryKey: activityLogKeys.workspaceRoot(workspaceId) });
     },
   });
 }
@@ -148,6 +150,8 @@ export function useUpdateTaskMutation(workspaceId: string, params: TaskQueryPara
     onSettled: (_data, _error, variables) => {
       qc.invalidateQueries({ queryKey: taskKeys.all(workspaceId) });
       qc.invalidateQueries({ queryKey: taskKeys.detail(workspaceId, variables.id) });
+      qc.invalidateQueries({ queryKey: activityLogKeys.workspaceRoot(workspaceId) });
+      qc.invalidateQueries({ queryKey: activityLogKeys.taskRoot(workspaceId, variables.id) });
     },
   });
 }
@@ -193,8 +197,10 @@ export function useDeleteTaskMutation(
     onError: (_err, _variables, context) => {
       if (context?.previous) { qc.setQueryData(queryKey, context.previous); }
     },
-    onSettled: () => {
+    onSettled: (_data, _error, id) => {
       qc.invalidateQueries({ queryKey: taskKeys.all(workspaceId) });
+      qc.invalidateQueries({ queryKey: activityLogKeys.workspaceRoot(workspaceId) });
+      qc.invalidateQueries({ queryKey: activityLogKeys.taskRoot(workspaceId, id) });
     },
   });
 }

@@ -7,8 +7,12 @@ import type { ActivityLogPage, ActivityLogQueryParams } from './types';
 import { ActivityEntityType } from './types';
 
 export const activityLogKeys = {
+  workspaceRoot: (workspaceId: string) =>
+    ['workspaces', workspaceId, 'activity-logs'] as const,
   workspace: (workspaceId: string, params: ActivityLogQueryParams) =>
     ['workspaces', workspaceId, 'activity-logs', params] as const,
+  taskRoot: (workspaceId: string, taskId: string) =>
+    ['workspaces', workspaceId, 'tasks', taskId, 'activity-logs'] as const,
   task: (workspaceId: string, taskId: string, params: ActivityLogQueryParams) =>
     ['workspaces', workspaceId, 'tasks', taskId, 'activity-logs', params] as const,
 };
