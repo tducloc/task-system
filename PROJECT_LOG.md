@@ -122,9 +122,36 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 **Vấn đề cần xử lý:**
 - Task delete hiện cascade xóa luôn activity logs → mất traceability. Cần refactor sang **Soft Delete** (`deletedAt` field) để giữ log DELETED và hỗ trợ workspace-level activity feed.
 
+### Day 14: Soft Delete Task + Unified Activity Log (Đã xong - 2026-05-21)
+**Backend:**
+- **Soft Delete Task**: Thêm `Task.deletedAt DateTime?` + index `(workspaceId, deletedAt)`. `TasksService.delete()` đổi từ hard-delete cascade sang `update({ deletedAt })`, giữ lại `TaskAssignee` snapshot. `getAll`/`get`/`update` filter `deletedAt: null` trong where clause dùng chung.
+- **Unified ActivityLog Polymorphic**: Drop `TaskActivityLog` (Day 13), tạo model `ActivityLog` polymorphic với `entityType` (TASK/WORKSPACE/USER/MEMBERSHIP) + `entityId` + `action`. Pattern theo Notion/Coda — 1 bảng duy nhất cho tất cả entity events.
+- **Schema fields**: `field String?` (cho mọi entity, không bị enum bloat), `oldValue`/`newValue`, `actor`+`targetUser` (2 relations User), `metadata Json?` (snapshot title/name tại thời điểm log), indexes `(workspaceId, createdAt DESC)` + `(entityType, entityId)` + `(actorUserId)`.
+- **Shared `ActivityLogsModule`**: Move từ `tasks/activity-logs/` → `modules/activity-logs/`. Service `log(input)`/`logBulk()`/`getAll(workspaceId, query)`. `LogActivityInput` interface dùng `...spread` resolve về `UncheckedCreateInput` của Prisma (tự match XOR).
+- **2 endpoints**: `GET /workspaces/:id/activity-logs` (feed chính, pagination + filter `entityType`/`entityId`/`actorUserId`) + `GET /workspaces/:id/tasks/:taskId/activity-logs` (alias, scoped tự động `entityType=TASK`).
+- **Integration logging**:
+  - `TasksService`: CREATED/UPDATED per field/DELETED/ASSIGNED/UNASSIGNED.
+  - `WorkspacesService`: WORKSPACE_CREATED/UPDATED + JOINED (entityType=MEMBERSHIP) + cascade delete activityLog trong `remove()`.
+  - `MembershipsService`: UPDATED (role change) + phân biệt LEFT (self-leave) vs KICKED (kick by owner) qua flag `isSelfLeave`.
+
+**Frontend:**
+- **Shared `features/activity-logs/`**: types (`ActivityLog`, enum `ActivityEntityType`/`ActivityAction`), api hooks (`useWorkspaceActivityLogsQuery`, `useTaskActivityLogsQuery`), `messageRenderer.tsx` (icon + i18n tiếng Việt theo entityType+action+field).
+- **Sheet slide-in panel** (shadcn `sheet` + `@radix-ui/react-dialog`): `WorkspaceActivityFeed.tsx` trong Sheet trigger từ icon Activity ở `WorkspaceDetailPage`. Filter dropdown entity type + pagination.
+- **Refactor `TaskActivityTimeline`**: shape Day 13 (`log.user`, flat array) → Day 14 (`log.actor`, `{ data, meta }` pagination). Dùng chung `messageRenderer` với workspace feed.
+
+**Quyết định kỹ thuật:**
+- Polymorphic `ActivityLog` 1 bảng thay vì 3 bảng riêng (Task/Workspace/User): theo pattern Notion/Coda, scale tự nhiên khi thêm entity mới (Comment, Page...) chỉ cần thêm enum value.
+- `field: String?` thay vì enum riêng cho từng entity: tránh enum bloat, không cần migration khi thêm field. Mapping enum → label/icon ở FE layer.
+- 2 endpoints riêng (feed chính + task alias) thay vì 1 endpoint với filter: REST nested semantic đẹp, giữ tương thích URL Day 13 FE.
+- Workspace feed KHÔNG aggregate task events (theo pattern Linear): task có timeline riêng ở row expand, workspace feed chỉ show workspace + membership events. Tránh duplicate log + giảm complexity query.
+- Workspace `remove()` cascade delete activity logs (FK `ON DELETE RESTRICT`): không giữ log WORKSPACE_DELETED (chấp nhận mất history khi workspace bị xóa hoàn toàn — MVP scope).
+- Membership remove dùng tuple return `{ deleted, isSelfLeave }` từ transaction để phân biệt LEFT/KICKED ở log call ngoài transaction.
+
+**Vấn đề tồn đọng:**
+- Log calls nằm NGOÀI transaction (`this.prisma.activityLog.log()` không dùng `tx`) → nếu log fail thì entity write đã commit, không rollback. Chấp nhận inconsistency lỏng cho MVP. Refactor sau: truyền `tx` vào helper.
+
 ## 3. Bước tiếp theo (Next up)
-- **Day 14**: Soft Delete Task + Workspace Activity Log (BE model `WorkspaceActivityLog`, auto-log CRUD workspace + membership changes, FE workspace activity feed).
-- **Day 15**: User Activity Log (BE model `UserActivityLog`, FE user activity UI).
+- **Day 15**: User Activity Log (BE leverage sẵn `entityType=USER`, FE user activity profile).
 - **Day 16**: Redis setup + Cache task list.
 - **Day 17**: Cache invalidation + consistency testing.
 
