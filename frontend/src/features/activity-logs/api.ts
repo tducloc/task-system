@@ -6,7 +6,7 @@ import { api } from '@/lib/api-client';
 import type { ActivityLogPage, ActivityLogQueryParams } from './types';
 import { ActivityEntityType } from './types';
 
-export const ACTIVITY_FEED_PAGE_SIZE = 10;
+export const ACTIVITY_FEED_PAGE_SIZE = 30;
 
 export const activityLogKeys = {
   workspaceRoot: (workspaceId: string) =>
