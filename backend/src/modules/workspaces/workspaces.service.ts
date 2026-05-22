@@ -4,14 +4,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { ActivityAction, ActivityEntityType } from 'prisma/generated/client';
+
 import { PrismaService } from '@/database/prisma.service';
 
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { ActivityLogInput } from '../activity-logs/types';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 
 @Injectable()
 export class WorkspacesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLogs: ActivityLogsService,
+  ) {}
 
   create(userId: string, createWorkspaceDto: CreateWorkspaceDto) {
     return this.prisma.$transaction(async (tx) => {
@@ -27,6 +34,15 @@ export class WorkspacesService {
           userId,
           role: 'OWNER',
         },
+      });
+
+      // Log activity
+      await this.activityLogs.log({
+        workspaceId: workspace.id,
+        actorUserId: userId,
+        action: ActivityAction.CREATED,
+        entityId: workspace.id,
+        entityType: ActivityEntityType.WORKSPACE,
       });
 
       return workspace;
@@ -63,29 +79,48 @@ export class WorkspacesService {
     return workspace;
   }
 
-  update(id: string, updateWorkspaceDto: UpdateWorkspaceDto) {
-    return this.prisma.workspace.update({
+  async update(
+    id: string,
+    userId: string,
+    updateWorkspaceDto: UpdateWorkspaceDto,
+  ) {
+    const old = await this.prisma.workspace.findUniqueOrThrow({
+      where: { id },
+    });
+
+    const updated = await this.prisma.workspace.update({
       where: { id },
       data: updateWorkspaceDto,
     });
+
+    const logData: ActivityLogInput[] = [];
+    for (const key of Object.keys(updateWorkspaceDto) as Array<
+      keyof UpdateWorkspaceDto
+    >) {
+      logData.push({
+        entityType: ActivityEntityType.WORKSPACE,
+        entityId: id,
+        action: ActivityAction.UPDATED,
+        field: key,
+        oldValue: String(old[key as keyof typeof old]),
+        newValue: String(updateWorkspaceDto[key]),
+        workspaceId: id,
+        actorUserId: userId,
+        metadata: { workspaceName: old.name },
+      });
+    }
+
+    await this.activityLogs.logBulk(logData);
+
+    return updated;
   }
 
   remove(id: string) {
     return this.prisma.$transaction(async (tx) => {
-      // Delete all membership
-      await tx.membership.deleteMany({
-        where: { workspaceId: id },
-      });
-
-      // Delete all tasks
-      await tx.task.deleteMany({
-        where: { workspaceId: id },
-      });
-
-      // Delete workspace
-      return tx.workspace.delete({
-        where: { id },
-      });
+      await tx.activityLog.deleteMany({ where: { workspaceId: id } });
+      await tx.membership.deleteMany({ where: { workspaceId: id } });
+      await tx.task.deleteMany({ where: { workspaceId: id } });
+      return tx.workspace.delete({ where: { id } });
     });
   }
 
@@ -110,8 +145,20 @@ export class WorkspacesService {
       );
     }
 
-    return this.prisma.membership.create({
+    const newMembership = await this.prisma.membership.create({
       data: { workspaceId: id, userId, role: 'MEMBER' },
     });
+
+    await this.activityLogs.log({
+      entityType: ActivityEntityType.MEMBERSHIP,
+      entityId: newMembership.id,
+      action: ActivityAction.JOINED,
+      workspaceId: id,
+      actorUserId: userId,
+      targetUserId: userId,
+      metadata: { workspaceName: workspace.name },
+    });
+
+    return newMembership;
   }
 }

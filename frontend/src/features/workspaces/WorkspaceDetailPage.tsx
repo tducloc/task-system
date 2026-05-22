@@ -1,12 +1,20 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Activity, ArrowLeft, Loader2, Pencil, Trash2, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { ApiError } from '@/lib/api-client';
 import { useMeQuery } from '@/features/users/api';
+import WorkspaceActivityFeed from '@/features/activity-logs/WorkspaceActivityFeed';
 import {
   useWorkspaceQuery,
   useUpdateWorkspaceMutation,
@@ -164,16 +172,33 @@ export default function WorkspaceDetailPage() {
           ) : (
             <CardTitle className="text-xl">{workspace.name}</CardTitle>
           )}
-          {isOwner && !isEditing && (
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" onClick={handleStartEditing}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-1">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" title="Lịch sử hoạt động">
+                  <Activity className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="flex flex-col w-full sm:max-w-md">
+                <SheetHeader>
+                  <SheetTitle>Lịch sử hoạt động</SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 min-h-0 mt-4">
+                  <WorkspaceActivityFeed workspaceId={workspace.id} />
+                </div>
+              </SheetContent>
+            </Sheet>
+            {isOwner && !isEditing && (
+              <>
+                <Button variant="ghost" size="icon" onClick={handleStartEditing}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleDelete}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-muted-foreground">
           <p>ID: <span className="font-mono">{workspace.id}</span></p>

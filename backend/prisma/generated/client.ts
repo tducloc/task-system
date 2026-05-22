@@ -70,7 +70,7 @@ export type TaskAssignee = Prisma.TaskAssigneeModel
  */
 export type RefreshToken = Prisma.RefreshTokenModel
 /**
- * Model TaskActivityLog
+ * Model ActivityLog
  * 
  */
-export type TaskActivityLog = Prisma.TaskActivityLogModel
+export type ActivityLog = Prisma.ActivityLogModel

@@ -2,18 +2,18 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from 'prisma/generated/client';
 import {
-  TaskActivityLogAction,
-  TaskActivityLogField,
+  ActivityAction,
+  ActivityEntityType,
+  // TaskActivityLogAction,
+  // TaskActivityLogField,
   TaskStatus,
 } from 'prisma/generated/enums';
-import { text } from 'stream/consumers';
 
 import { PrismaService } from '@/database/prisma.service';
 import { OrderBy } from '@/types/sorts';
-import { checkIsPrismaError } from '@/utils/errors';
 
-import { ActivityLogsService } from './activity-logs/activity-logs.service';
-import { CreateActivityLogDto } from './activity-logs/dto/create-activity-log.dto';
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { ActivityLogInput } from '../activity-logs/types';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { QueryTaskDto, SortBy } from './dto/query-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -63,12 +63,11 @@ export class TasksService {
     });
 
     await this.activityLogs.log({
-      userId,
+      entityId: newTask.id,
+      entityType: ActivityEntityType.TASK,
+      action: ActivityAction.CREATED,
+      actorUserId: userId,
       workspaceId,
-      taskId: newTask.id,
-      data: {
-        action: TaskActivityLogAction.CREATED,
-      },
     });
 
     return newTask;
@@ -86,6 +85,7 @@ export class TasksService {
     } = query;
 
     const where: Prisma.TaskWhereInput = {
+      deletedAt: null,
       workspaceId,
       assignees: assignees
         ? { some: { userId: { in: assignees } } }
@@ -96,7 +96,6 @@ export class TasksService {
 
     const data = await this.prisma.task.findMany({
       where,
-
       orderBy: { [sortBy]: orderBy },
       include: {
         assignees: {
@@ -132,6 +131,7 @@ export class TasksService {
       where: {
         id,
         workspaceId,
+        deletedAt: null,
       },
     });
 
@@ -157,6 +157,7 @@ export class TasksService {
       where: {
         id,
         workspaceId,
+        deletedAt: null,
       },
       include: {
         assignees: {
@@ -208,19 +209,26 @@ export class TasksService {
       return updatedTask;
     });
 
-    const logData: CreateActivityLogDto[] = [];
+    const logData: ActivityLogInput[] = [];
 
     const keys = Object.keys(data).filter(
       (key) => !['assignees'].includes(key),
     );
 
+    const common = {
+      entityId: oldTask.id,
+      entityType: ActivityEntityType.TASK,
+      actorUserId: userId,
+      workspaceId,
+    };
+
     for (const key of keys) {
-      const value = data[key];
       logData.push({
-        action: TaskActivityLogAction.UPDATED,
-        field: key as TaskActivityLogField,
-        oldValue: oldTask[key],
-        newValue: value,
+        ...common,
+        action: ActivityAction.UPDATED,
+        field: key,
+        oldValue: String(oldTask[key]),
+        newValue: String(data[key]),
       });
     }
 
@@ -244,7 +252,8 @@ export class TasksService {
 
       for (const id of unassigned) {
         logData.push({
-          action: TaskActivityLogAction.UNASSIGNED,
+          ...common,
+          action: ActivityAction.UNASSIGNED,
           oldValue: oldEmailMap.get(id),
           newValue: null,
         });
@@ -252,7 +261,8 @@ export class TasksService {
 
       for (const id of assigned) {
         logData.push({
-          action: TaskActivityLogAction.ASSIGNED,
+          ...common,
+          action: ActivityAction.ASSIGNED,
           oldValue: null,
           newValue: newEmailMap.get(id),
         });
@@ -260,12 +270,7 @@ export class TasksService {
     }
 
     // Add bulk logs
-    await this.activityLogs.logBulk({
-      userId,
-      workspaceId,
-      taskId: oldTask.id,
-      data: logData,
-    });
+    await this.activityLogs.logBulk(logData);
 
     return updatedTask;
   }
@@ -280,28 +285,24 @@ export class TasksService {
     workspaceId: string;
   }) {
     const task = await this.prisma.task.findFirst({
-      where: { id, workspaceId },
+      where: { id, workspaceId, deletedAt: null },
     });
 
     if (!task) {
       throw new NotFoundException('Task not found');
     }
 
-    const deletedTask = await this.prisma.$transaction(async (tx) => {
-      // Delete all assignee records
-      await tx.taskAssignee.deleteMany({
-        where: { taskId: id },
-      });
+    const deletedTask = await this.prisma.task.update({
+      where: { id, workspaceId },
+      data: { deletedAt: new Date() },
+    });
 
-      // Delete all acitivity records
-      await tx.taskActivityLog.deleteMany({
-        where: { taskId: id, workspaceId },
-      });
-
-      // Delete tasks
-      return await tx.task.delete({
-        where: { id, workspaceId },
-      });
+    await this.activityLogs.log({
+      entityId: deletedTask.id,
+      entityType: ActivityEntityType.TASK,
+      action: ActivityAction.DELETED,
+      actorUserId: userId,
+      workspaceId,
     });
 
     return deletedTask;

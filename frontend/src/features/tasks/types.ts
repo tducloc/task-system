@@ -70,23 +70,3 @@ export interface UpdateTaskInput {
   assignees?: string[];
 }
 
-export enum TaskActivityAction {
-  CREATED = 'CREATED',
-  UPDATED = 'UPDATED',
-  DELETED = 'DELETED',
-  ASSIGNED = 'ASSIGNED',
-  UNASSIGNED = 'UNASSIGNED',
-}
-
-export interface TaskActivityLog {
-  id: string;
-  action: TaskActivityAction;
-  field?: string;
-  oldValue?: string | null;
-  newValue?: string | null;
-  taskId: string;
-  userId: string;
-  user: { id: string; email: string };
-  workspaceId: string;
-  createdAt: string;
-}

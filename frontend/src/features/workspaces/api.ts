@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
+import { activityLogKeys } from '@/features/activity-logs/api';
 import type {
   CreateWorkspaceInput,
   Membership,
@@ -60,6 +61,7 @@ export function useUpdateWorkspaceMutation(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: workspaceKeys.all });
       qc.invalidateQueries({ queryKey: workspaceKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: activityLogKeys.workspaceRoot(id) });
     },
   });
 }
@@ -77,9 +79,10 @@ export function useDeleteWorkspaceMutation() {
 export function useJoinWorkspaceMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.post(`/workspaces/${id}/join`),
-    onSuccess: () => {
+    mutationFn: (id: string) => api.post<Membership>(`/workspaces/${id}/join`),
+    onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: workspaceKeys.all });
+      qc.invalidateQueries({ queryKey: activityLogKeys.workspaceRoot(id) });
     },
   });
 }
@@ -92,6 +95,7 @@ export function useUpdateMembershipMutation(workspaceId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: workspaceKeys.members(workspaceId) });
       qc.invalidateQueries({ queryKey: workspaceKeys.detail(workspaceId) });
+      qc.invalidateQueries({ queryKey: activityLogKeys.workspaceRoot(workspaceId) });
     },
   });
 }
@@ -105,6 +109,7 @@ export function useDeleteMembershipMutation(workspaceId: string) {
       qc.invalidateQueries({ queryKey: workspaceKeys.members(workspaceId) });
       qc.invalidateQueries({ queryKey: workspaceKeys.detail(workspaceId) });
       qc.invalidateQueries({ queryKey: workspaceKeys.all });
+      qc.invalidateQueries({ queryKey: activityLogKeys.workspaceRoot(workspaceId) });
     },
   });
 }

@@ -27,39 +27,42 @@ enum Role {
 }
 
 model User {
-  id               String            @id @default(uuid())
-  email            String            @unique
-  password         String
-  memberships      Membership[]
-  taskAssignees    TaskAssignee[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  refreshTokens    RefreshToken[]
-  taskActivityLogs TaskActivityLog[]
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  memberships   Membership[]
+  taskAssignees TaskAssignee[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+
+  actorActivityLogs  ActivityLog[] @relation("ActorActivity")
+  targetActivityLogs ActivityLog[] @relation("TargetActivity")
 }
 
 model Task {
-  id               String            @id @default(uuid())
-  title            String
-  workspaceId      String
-  workspace        Workspace         @relation(fields: [workspaceId], references: [id])
-  status           TaskStatus        @default(TODO)
-  assignees        TaskAssignee[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  taskActivityLogs TaskActivityLog[]
+  id          String         @id @default(uuid())
+  title       String
+  workspaceId String
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id])
+  status      TaskStatus     @default(TODO)
+  assignees   TaskAssignee[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
 
   @@index([workspaceId])
+  @@index([workspaceId, deletedAt])
 }
 
 model Workspace {
-  id               String            @id @default(uuid())
-  name             String
-  tasks            Task[]
-  memberships      Membership[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  taskActivityLogs TaskActivityLog[]
+  id           String        @id @default(uuid())
+  name         String
+  tasks        Task[]
+  memberships  Membership[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  activityLogs ActivityLog[]
 }
 
 model Membership {
@@ -112,37 +115,50 @@ model RefreshToken {
   @@index([userId])
 }
 
-enum TaskActivityLogAction {
+enum ActivityEntityType {
+  TASK
+  WORKSPACE
+  USER
+  MEMBERSHIP
+}
+
+enum ActivityAction {
   CREATED
   UPDATED
   DELETED
+
+  JOINED
+  LEFT
+  KICKED
+
   ASSIGNED
   UNASSIGNED
 }
 
-enum TaskActivityLogField {
-  title
-  status
-}
+model ActivityLog {
+  id         String             @id @default(uuid())
+  entityType ActivityEntityType
+  entityId   String
+  action     ActivityAction
 
-model TaskActivityLog {
-  id       String                @id @default(uuid())
-  action   TaskActivityLogAction
-  field    TaskActivityLogField?
+  field    String?
   oldValue String?
   newValue String?
-
-  taskId String
-  task   Task   @relation(fields: [taskId], references: [id])
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
 
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
 
+  actorUserId String
+  actor       User   @relation("ActorActivity", fields: [actorUserId], references: [id])
+
+  targetUserId String?
+  targetUser   User?   @relation("TargetActivity", fields: [targetUserId], references: [id])
+
+  metadata Json?
+
   createdAt DateTime @default(now())
 
-  @@index([taskId])
-  @@index([workspaceId])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@index([actorUserId])
 }

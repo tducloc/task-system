@@ -11,7 +11,10 @@ import {
 
 import { Role } from 'prisma/generated/enums';
 
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  type AuthenticatedUser,
+  CurrentUser,
+} from '../auth/decorators/current-user.decorator';
 import { WorkspaceRoles } from '../auth/decorators/workspace-roles.decorator';
 import { WorkspaceRoleGuard } from '../auth/guards/workspace-role.guard';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
@@ -23,12 +26,15 @@ export class WorkspacesController {
   constructor(private readonly workspacesService: WorkspacesService) {}
 
   @Post()
-  create(@CurrentUser() user, @Body() createWorkspaceDto: CreateWorkspaceDto) {
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() createWorkspaceDto: CreateWorkspaceDto,
+  ) {
     return this.workspacesService.create(user.sub, createWorkspaceDto);
   }
 
   @Get()
-  findAll(@CurrentUser() user) {
+  findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.workspacesService.findAll(user.sub);
   }
 
@@ -45,8 +51,9 @@ export class WorkspacesController {
   update(
     @Param('id') id: string,
     @Body() updateWorkspaceDto: UpdateWorkspaceDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.workspacesService.update(id, updateWorkspaceDto);
+    return this.workspacesService.update(id, user.sub, updateWorkspaceDto);
   }
 
   @Delete(':id')
@@ -57,7 +64,7 @@ export class WorkspacesController {
   }
 
   @Post(':id/join')
-  join(@CurrentUser() user, @Param('id') id: string) {
+  join(@CurrentUser() user: { sub: string }, @Param('id') id: string) {
     return this.workspacesService.join(user.sub, id);
   }
 }
