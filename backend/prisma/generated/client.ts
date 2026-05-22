@@ -74,3 +74,8 @@ export type RefreshToken = Prisma.RefreshTokenModel
  * 
  */
 export type ActivityLog = Prisma.ActivityLogModel
+/**
+ * Model UserActivityLog
+ * 
+ */
+export type UserActivityLog = Prisma.UserActivityLogModel

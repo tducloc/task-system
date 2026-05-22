@@ -32,11 +32,12 @@ export default function UserDetailPage() {
     <div className="mx-auto max-w-2xl p-6">
       <Card>
         <CardHeader>
-          <CardTitle>User {data.email}</CardTitle>
+          <CardTitle>{data.name ?? data.email}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <Row label="ID" value={data.id} />
           <Row label="Email" value={data.email} />
+          <Row label="Tên" value={data.name ?? '—'} />
           <Row label="Tạo lúc" value={new Date(data.createdAt).toLocaleString('vi-VN')} />
           <Row label="Cập nhật" value={new Date(data.updatedAt).toLocaleString('vi-VN')} />
         </CardContent>

@@ -150,8 +150,37 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 **Vấn đề tồn đọng:**
 - Log calls nằm NGOÀI transaction (`this.prisma.activityLog.log()` không dùng `tx`) → nếu log fail thì entity write đã commit, không rollback. Chấp nhận inconsistency lỏng cho MVP. Refactor sau: truyền `tx` vào helper.
 
+### Day 15: User Activity Log + Profile Edit (Đã xong - 2026-05-22)
+**Backend:**
+- **Schema**: Thêm `User.name String?` + model riêng `UserActivityLog` với enum `UserActivityAction` (PROFILE_UPDATED, PASSWORD_CHANGED). FK `userId` + index `(userId, createdAt DESC)`. **KHÔNG dùng** `ActivityLog` polymorphic của Day 14.
+- **`UserActivityLogsModule`** (`modules/user-activity-logs/`): Service `log()` + `logBulk()` (có empty-array guard) + `getAll(userId, query)`. Controller `GET /users/me/activities` (pagination + optional `action` filter, dùng `@CurrentUser()` thay vì WorkspaceRoleGuard).
+- **`PATCH /users/me`**: DTO `UpdateMeDto` (name, currentPassword, newPassword) với `@ValidateIf` cho currentPassword khi có newPassword. Service `updateMe()`:
+  - Early throw `BadRequestException('Nothing to update')` nếu cả 2 field rỗng.
+  - Verify `bcrypt.compareSync(currentPassword, oldPassword)` → `BadRequestException('Current password is incorrect')`.
+  - Hash `newPassword` bằng `bcrypt.hashSync(_, 10)`.
+  - Log PROFILE_UPDATED field=`name` (kèm oldValue/newValue) + PASSWORD_CHANGED **không** lưu values (event marker only).
+- **Migration squash workflow**: Day 15 ban đầu tạo 2 migrations trùng tên do rename field `meta` → `metadata`. Squash bằng `rm -rf` 2 migrations dirty → `prisma migrate reset --force` (replay đến hết Day 14) → `prisma migrate dev --name <name>` tạo lại 1 migration sạch.
+
+**Frontend:**
+- **`features/user-activity-logs/`** mới: types (`UserActivityLog`, enum `UserActivityAction`), `useMyActivityLogsInfiniteQuery` (page size 30, qs.stringify), `messageRenderer.tsx` (icon `KeyRound`/`UserCog` + label tiếng Việt).
+- **Profile edit split components** (tất cả < 200 lines):
+  - `ProfileNameSection.tsx`: inline edit toggle (Pencil → Check/X buttons), `useUpdateMeMutation` invalidate `['me']` + `['me', 'activities']`.
+  - `ProfilePasswordSection.tsx`: form với currentPassword + newPassword + confirmPassword, FE validate length + match trước khi submit.
+  - `ProfileEditCard.tsx`: wrapper Card chứa cả 2 + email read-only.
+- **`UserActivityFeed.tsx`**: dùng pattern infinite scroll như `WorkspaceActivityFeed` (Day 14), filter dropdown action (ALL/PROFILE_UPDATED/PASSWORD_CHANGED), height 600px.
+- **`MePage.tsx`** refactor: 2-column responsive grid `lg:grid-cols-[1fr_1.2fr]`, left = ProfileEditCard, right = UserActivityFeed.
+- **`UserDetailPage.tsx`** update: hiển thị `data.name ?? data.email` ở title, thêm Row "Tên" với fallback `—`.
+
+**Quyết định kỹ thuật:**
+- **Tách bảng `UserActivityLog` riêng** (KHÔNG dùng `ActivityLog` polymorphic của Day 14): user account audit có scope khác (global, không thuộc workspace) vs workspace collaboration. Gộp chung sẽ phải `workspaceId nullable` → bẩn mọi query workspace feed. Pattern industry — Notion/GitHub/Linear cũng tách audit log riêng. Trade-off: 1 ít code duplication (`logBulk` helper), nhưng lợi schema clarity + future flexibility (sau này thêm LOGIN/LOGOUT + ipAddress/userAgent).
+- **Password log không lưu values** (KHÔNG có oldValue/newValue): chỉ là event marker. Lưu password (kể cả hashed) trong audit log là anti-pattern — offline crack target + leak vector. Audit chỉ cần biết "đổi password lúc nào".
+- **Split Profile thành 2 sub-components** (ProfileNameSection + ProfilePasswordSection): mỗi component < 100 lines, single responsibility, dễ test riêng.
+- **FE validate password match/length trước khi submit**: tránh round-trip BE chỉ để báo "mật khẩu không khớp". BE vẫn check lại để safety.
+
+**E2E test Playwright:**
+- Setup Playwright test trong `/tmp/pw-day15/` (không pollute repo). Test cover: register → login → check render → edit name → check toast + render → wrong currentPassword → correct password → check 2 activity entries → re-login với new password. ALL 12 checks PASS. Screenshot lưu `/tmp/pw-day15/me-page.png`.
+
 ## 3. Bước tiếp theo (Next up)
-- **Day 15**: User Activity Log (BE leverage sẵn `entityType=USER`, FE user activity profile).
 - **Day 16**: Redis setup + Cache task list.
 - **Day 17**: Cache invalidation + consistency testing.
 

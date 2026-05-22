@@ -30,14 +30,16 @@ model User {
   id            String         @id @default(uuid())
   email         String         @unique
   password      String
+  name          String?
   memberships   Membership[]
   taskAssignees TaskAssignee[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
 
-  actorActivityLogs  ActivityLog[] @relation("ActorActivity")
-  targetActivityLogs ActivityLog[] @relation("TargetActivity")
+  actorActivityLogs  ActivityLog[]     @relation("ActorActivity")
+  targetActivityLogs ActivityLog[]     @relation("TargetActivity")
+  userActivityLogs   UserActivityLog[]
 }
 
 model Task {
@@ -161,4 +163,28 @@ model ActivityLog {
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([entityType, entityId])
   @@index([actorUserId])
+}
+
+enum UserActivityAction {
+  PROFILE_UPDATED
+  PASSWORD_CHANGED
+}
+
+model UserActivityLog {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  action UserActivityAction
+
+  field    String?
+  oldValue String?
+  newValue String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
 }
