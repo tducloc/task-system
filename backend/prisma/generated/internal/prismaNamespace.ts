@@ -390,7 +390,8 @@ export const ModelName = {
   Membership: 'Membership',
   TaskAssignee: 'TaskAssignee',
   RefreshToken: 'RefreshToken',
-  ActivityLog: 'ActivityLog'
+  ActivityLog: 'ActivityLog',
+  UserActivityLog: 'UserActivityLog'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -406,7 +407,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "task" | "workspace" | "membership" | "taskAssignee" | "refreshToken" | "activityLog"
+    modelProps: "user" | "task" | "workspace" | "membership" | "taskAssignee" | "refreshToken" | "activityLog" | "userActivityLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -928,6 +929,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    UserActivityLog: {
+      payload: Prisma.$UserActivityLogPayload<ExtArgs>
+      fields: Prisma.UserActivityLogFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserActivityLogFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserActivityLogFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload>
+        }
+        findFirst: {
+          args: Prisma.UserActivityLogFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserActivityLogFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload>
+        }
+        findMany: {
+          args: Prisma.UserActivityLogFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload>[]
+        }
+        create: {
+          args: Prisma.UserActivityLogCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload>
+        }
+        createMany: {
+          args: Prisma.UserActivityLogCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UserActivityLogCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload>[]
+        }
+        delete: {
+          args: Prisma.UserActivityLogDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload>
+        }
+        update: {
+          args: Prisma.UserActivityLogUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload>
+        }
+        deleteMany: {
+          args: Prisma.UserActivityLogDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserActivityLogUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UserActivityLogUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload>[]
+        }
+        upsert: {
+          args: Prisma.UserActivityLogUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityLogPayload>
+        }
+        aggregate: {
+          args: Prisma.UserActivityLogAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserActivityLog>
+        }
+        groupBy: {
+          args: Prisma.UserActivityLogGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserActivityLogGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserActivityLogCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserActivityLogCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -971,6 +1046,7 @@ export const UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
   password: 'password',
+  name: 'name',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1053,6 +1129,20 @@ export const ActivityLogScalarFieldEnum = {
 } as const
 
 export type ActivityLogScalarFieldEnum = (typeof ActivityLogScalarFieldEnum)[keyof typeof ActivityLogScalarFieldEnum]
+
+
+export const UserActivityLogScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  action: 'action',
+  field: 'field',
+  oldValue: 'oldValue',
+  newValue: 'newValue',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+} as const
+
+export type UserActivityLogScalarFieldEnum = (typeof UserActivityLogScalarFieldEnum)[keyof typeof UserActivityLogScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1201,6 +1291,20 @@ export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prisma
 
 
 /**
+ * Reference to a field of type 'UserActivityAction'
+ */
+export type EnumUserActivityActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserActivityAction'>
+    
+
+
+/**
+ * Reference to a field of type 'UserActivityAction[]'
+ */
+export type ListEnumUserActivityActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserActivityAction[]'>
+    
+
+
+/**
  * Reference to a field of type 'Int'
  */
 export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
@@ -1330,6 +1434,7 @@ export type GlobalOmitConfig = {
   taskAssignee?: Prisma.TaskAssigneeOmit
   refreshToken?: Prisma.RefreshTokenOmit
   activityLog?: Prisma.ActivityLogOmit
+  userActivityLog?: Prisma.UserActivityLogOmit
 }
 
 /* Types for Logging */

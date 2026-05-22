@@ -48,3 +48,11 @@ export const ActivityAction = {
 } as const
 
 export type ActivityAction = (typeof ActivityAction)[keyof typeof ActivityAction]
+
+
+export const UserActivityAction = {
+  PROFILE_UPDATED: 'PROFILE_UPDATED',
+  PASSWORD_CHANGED: 'PASSWORD_CHANGED'
+} as const
+
+export type UserActivityAction = (typeof UserActivityAction)[keyof typeof UserActivityAction]
