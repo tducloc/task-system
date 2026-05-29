@@ -2,24 +2,25 @@
   "folders": [
     {
       "name": "root",
-      "path": "."
+      "path": ".",
     },
     {
       "name": "backend",
-      "path": "backend"
+      "path": "backend",
     },
     {
       "name": "frontend",
-      "path": "frontend"
-    }
+      "path": "frontend",
+    },
   ],
   "settings": {
     "files.exclude": {
       "backend": true,
-      "frontend": true
+      "frontend": true,
     },
     "search.exclude": {
       "**/node_modules": true,
-    }
-  }
+    },
+    "js/ts.tsdk.path": "backend/node_modules/typescript/lib",
+  },
 }
