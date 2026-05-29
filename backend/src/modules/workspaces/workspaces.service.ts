@@ -20,33 +20,33 @@ export class WorkspacesService {
     private readonly activityLogs: ActivityLogsService,
   ) {}
 
-  create(userId: string, createWorkspaceDto: CreateWorkspaceDto) {
-    return this.prisma.$transaction(async (tx) => {
-      // Create workspace
-      const workspace = await tx.workspace.create({
+  async create(userId: string, createWorkspaceDto: CreateWorkspaceDto) {
+    const workspace = await this.prisma.$transaction(async (tx) => {
+      const ws = await tx.workspace.create({
         data: { name: createWorkspaceDto.name },
       });
 
-      // Add current user to become owner
       await tx.membership.create({
         data: {
-          workspaceId: workspace.id,
+          workspaceId: ws.id,
           userId,
           role: 'OWNER',
         },
       });
 
-      // Log activity
-      await this.activityLogs.log({
-        workspaceId: workspace.id,
-        actorUserId: userId,
-        action: ActivityAction.CREATED,
-        entityId: workspace.id,
-        entityType: ActivityEntityType.WORKSPACE,
-      });
-
-      return workspace;
+      return ws;
     });
+
+    // ↓ Log OUTSIDE transaction — workspace đã commit, FK resolve được
+    await this.activityLogs.log({
+      workspaceId: workspace.id,
+      actorUserId: userId,
+      action: ActivityAction.CREATED,
+      entityId: workspace.id,
+      entityType: ActivityEntityType.WORKSPACE,
+    });
+
+    return workspace;
   }
 
   findAll(userId: string) {

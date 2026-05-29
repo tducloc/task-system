@@ -180,7 +180,53 @@ File này dùng để theo dõi tiến độ của dự án, giúp AI nắm bắ
 **E2E test Playwright:**
 - Setup Playwright test trong `/tmp/pw-day15/` (không pollute repo). Test cover: register → login → check render → edit name → check toast + render → wrong currentPassword → correct password → check 2 activity entries → re-login với new password. ALL 12 checks PASS. Screenshot lưu `/tmp/pw-day15/me-page.png`.
 
+### Day 16: Redis Setup + Task List Cache + Invalidation (Đã xong - 2026-05-25)
+**Hạ tầng:**
+- Chạy Redis 7-alpine container đứng riêng (`docker run --name task-system-redis -p 6379:6379 --restart unless-stopped`). Chưa dùng `docker-compose.yml` — defer sang Day 17.
+- Thêm `REDIS_HOST`/`REDIS_PORT` vào Joi schema với `.default()` (không required) để fresh clone không vỡ.
+
+**Backend:**
+- **`RedisModule` global + `RedisService`** (`src/database/`): wrap `ioredis` client với lifecycle `onModuleInit`/`onModuleDestroy`. API: `get<T>(key)`, `set(key, value, ttlSec)`, `del(key)`, `delByPattern(pattern)`. JSON.parse/stringify ẩn trong service. `maxRetriesPerRequest: 3` để fail-fast khi Redis chết.
+- **`delByPattern` dùng `SCAN` cursor** thay vì `KEYS` — production-safe ngay cả khi nhiều key. Stream batch 100 keys/cycle.
+- **Cache key strategy**: `tasks:list:{workspaceId}:{sha1Hash[12]}`. Helper `buildTaskListCacheKey` ở `tasks/utils/cache-key.ts` normalize query params (sort array `statuses`/`assignees` ASC) trước khi hash → 2 query khác thứ tự array = cùng key, tránh duplicate cache entries.
+- **Read-through cache** `TasksService.getAll`: thử `redis.get` trước → HIT thì return; MISS thì query DB → `redis.set` TTL 60s → return. Cache full response shape `{ data, meta }`.
+- **Write-through invalidation**: helper `invalidateListCache(workspaceId)` gọi `delByPattern('tasks:list:{wsId}:*')` sau mỗi `create`/`update`/`delete` (gọi NGOÀI `$transaction` để tránh race condition reader thấy uncommitted data → re-cache stale).
+- **Fix latent bug Day 14**: `WorkspacesService.create()` gọi `activityLogs.log()` **bên trong** `$transaction` callback nhưng dùng `this.prisma` (connection khác `tx`) → FK violation `P2003` khi workspace chưa commit. Fix: kéo `log()` ra ngoài transaction, match đúng intent đã ghi trong PROJECT_LOG Day 14.
+- **Fix latent bug Config**: `config/config.module.ts` gọi `ConfigModule.forRoot(...)` ở top-level nhưng vứt return value, không export, không import vào `AppModule` → `ConfigService` chưa bao giờ register vào DI container. Lỗi này latent từ Day 1, hôm nay `RedisService` lần đầu inject `ConfigService` mới lộ. Fix: export `AppConfigModule = ConfigModule.forRoot(...)` và import đầu `AppModule.imports`.
+
+**Quyết định kỹ thuật:**
+- **`ioredis` trực tiếp thay vì `@nestjs/cache-manager`**: control rõ TTL + invalidation pattern, API cache-manager v5+ rườm. Pattern hiện tại đủ đơn giản, không cần abstraction.
+- **SHA1 hash 12 ký tự** cho query: cân bằng giữa collision-safe (12 hex char ≈ 48 bit, collision rất hiếm cho 1 workspace) và length ngắn dễ debug. MD5 cũng OK, anh chọn SHA1 cho nhất quán convention.
+- **`delByPattern` wipe toàn workspace** (thô nhưng correct): mỗi mutation clear sạch cache list của workspace đó, kể cả page/filter không liên quan. Trade-off correctness > hit ratio — pattern industry (Notion/Linear). Sau này có thể tối ưu sang surgical invalidation nếu hit ratio drop.
+- **TTL 60s + event-driven invalidation song song** (defense in depth): nếu invalidation logic miss case nào đó, max stale = 60s. Không bao giờ stale vĩnh viễn.
+- **Log `[CACHE HIT]`/`[CACHE MISS]`/`[CACHE INVALIDATED]` dùng `logger.debug`**: dev mode bật, prod tắt được qua `LOG_LEVEL` env. Cleanup hẳn ở Day 17 sau khi unit test xong.
+- **Không cache single `get(id)`**: invalidation phức tạp gấp đôi, hit ratio thấp (single record ít hot hơn list). YAGNI.
+
+**Vấn đề tồn đọng / Defer:**
+- **Day 14 inconsistency lỏng** vẫn chưa fix: `activityLogs.log()` ngoài transaction → entity write commit mà log fail thì không rollback. Refactor truyền `tx` vào helper là cách triệt để, defer Day 17+.
+- **Unit test cache**: chưa viết. Day 17 sẽ cover: HIT/MISS path, normalize key (sort array), TTL expire, invalidation pattern match.
+- **`docker-compose.yml`**: chưa tạo. Day 17 setup compose cho Postgres + Redis, named volumes, `.env.example` đi kèm.
+- **PR chưa tạo**: defer sau Day 17 (gộp unit test + cache invalidation feature commit chung).
+
+### Day 17 (phần 1): Docker Compose Setup (Đã xong - 2026-05-26)
+**Hạ tầng:**
+- **`docker-compose.yml`** ở root project: 2 services `postgres` (postgres:16-alpine) + `redis` (redis:7-alpine) với named volumes `task-system-pgdata` + `task-system-redisdata`. `container_name` cố định để exec/debug dễ.
+- **Healthcheck** cho cả 2 service: `pg_isready` cho Postgres, `redis-cli ping` cho Redis — interval 5s, retries 5. Sau này CI có thể dùng `depends_on: { condition: service_healthy }` chính xác.
+- **Env interpolation** `${POSTGRES_USER:-loctd}`: đọc từ `.env` root project, fallback nếu trống → linh hoạt cho team/CI.
+- **`backend/.env.example`**: commit lên git với placeholder (`postgres:postgres`, `change-me-...` cho secret). Match default Postgres official image → fresh clone `cp .env.example .env` là chạy được.
+
+**Migration data:**
+- Reset path: stop container Postgres manual cũ, `docker compose up -d`, `prisma migrate deploy` lại từ đầu. MVP dev data → không cần dump/restore.
+
+**Quyết định kỹ thuật:**
+- **Named volume** thay vì bind mount: Docker quản lý, không vương vãi file vào project, dễ wipe khi cần (`docker compose down -v`).
+- **Standalone container manual → compose**: workflow setup máy mới giảm từ "đọc README + chạy 2 lệnh docker run riêng" xuống 1 lệnh `docker compose up -d`.
+
+**Vấn đề tồn đọng (chuyển sang phần 2 Day 17):**
+- Unit test cho cache layer chưa viết.
+- PR `[MVP] Add Redis cache for task list` chưa tạo (defer sau khi viết test).
+
 ## 3. Bước tiếp theo (Next up)
-- **Day 16**: Redis setup + Cache task list.
-- **Day 17**: Cache invalidation + consistency testing.
+- **Day 17 (phần 2)**: Unit test cho cache layer (HIT/MISS, normalize key, invalidation pattern) + tạo PR `[MVP] Add Redis cache for task list`.
+- **Day 18**: Queue system (BullMQ) + export tasks job (CSV) + file download API.
 

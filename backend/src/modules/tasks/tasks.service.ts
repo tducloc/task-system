@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from 'prisma/generated/client';
 import {
@@ -10,6 +10,7 @@ import {
 } from 'prisma/generated/enums';
 
 import { PrismaService } from '@/database/prisma.service';
+import { RedisService } from '@/database/redis.service';
 import { OrderBy } from '@/types/sorts';
 
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
@@ -17,13 +18,26 @@ import { ActivityLogInput } from '../activity-logs/types';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { QueryTaskDto, SortBy } from './dto/query-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { TaskListResponse } from './tasks/types';
+import {
+  TASK_LIST_CACHE_TTL_SEC,
+  buildTaskListCacheKey,
+} from './utils/cache-key';
 
 @Injectable()
 export class TasksService {
+  private readonly logger = new Logger(TasksService.name);
+
   constructor(
     private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
     private readonly activityLogs: ActivityLogsService,
   ) {}
+
+  private async invalidateListCache(workspaceId: string): Promise<void> {
+    await this.redis.delByPattern(`tasks:list:${workspaceId}:*`);
+    this.logger.debug(`[CACHE INVALIDATED] tasks:list:${workspaceId}:*`);
+  }
 
   async create({
     userId,
@@ -70,10 +84,23 @@ export class TasksService {
       workspaceId,
     });
 
+    await this.invalidateListCache(workspaceId);
+
     return newTask;
   }
 
   async getAll(workspaceId: string, query: QueryTaskDto) {
+    const cacheKey = buildTaskListCacheKey(workspaceId, query);
+
+    // 1. Try cache first
+    const cached = await this.redis.get<TaskListResponse>(cacheKey);
+    if (cached) {
+      this.logger.debug(`[CACHE HIT] ${cacheKey}`);
+      return cached;
+    }
+    this.logger.debug(`[CACHE MISS] ${cacheKey}`);
+
+    // 2. Cache miss → query DB
     const {
       page,
       limit,
@@ -115,7 +142,7 @@ export class TasksService {
       where,
     });
 
-    return {
+    const response = {
       meta: {
         page,
         limit,
@@ -124,6 +151,11 @@ export class TasksService {
       },
       data,
     };
+
+    // 3. Store in cache
+    await this.redis.set(cacheKey, response, TASK_LIST_CACHE_TTL_SEC);
+
+    return response;
   }
 
   async get(id: string, workspaceId: string) {
@@ -272,6 +304,8 @@ export class TasksService {
     // Add bulk logs
     await this.activityLogs.logBulk(logData);
 
+    await this.invalidateListCache(workspaceId);
+
     return updatedTask;
   }
 
@@ -304,6 +338,8 @@ export class TasksService {
       actorUserId: userId,
       workspaceId,
     });
+
+    await this.invalidateListCache(workspaceId);
 
     return deletedTask;
   }

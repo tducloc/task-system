@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: task-system-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-loctd}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Loc123456@}
+      POSTGRES_DB: ${POSTGRES_DB:-task_system}
+    volumes:
+      - task-system-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-loctd}' ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: task-system-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - task-system-redisdata:/data
+    healthcheck:
+      test: [ 'CMD', 'redis-cli', 'ping' ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  task-system-pgdata:
+  task-system-redisdata:
